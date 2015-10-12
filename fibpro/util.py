@@ -1,10 +1,7 @@
 import json
-from logging import getLogger
 from const import HOSTNAME
 import base64
 import six
-
-log = getLogger('gunicorn.error')
 
 def load_config(config_file=None):
     config = {}

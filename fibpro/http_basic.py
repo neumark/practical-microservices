@@ -1,5 +1,5 @@
 # based on: http://wsgi.readthedocs.org/en/latest/specifications/simple_authentication.html
-from util import log
+from logsink import log
 
 class HTTPBasic(object):
 

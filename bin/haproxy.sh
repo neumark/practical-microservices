@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
-. "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd -P )/../common.sh"
 
-
+workdir=`dirname $0`
 haproxy_port=8000
-haproxy_pid_file="$workdir/haproxy.pid"
-
-register_window "haproxy_$haproxy_port" "$src_config_dir/haproxy.sh run_service"
+haproxy_pid_file="$workdir/../etc/haproxy.pid"
 
 if [[ $1 == run_service ]]; then
     echo "Running local router haproxy on localhost:$haproxy_port"
@@ -29,7 +26,7 @@ if [[ $1 == run_service ]]; then
     fi
 
     set -m
-    haproxy $haproxy_flags -f ${haproxy_config_file:-$src_config_dir/haproxy.conf} &
+    haproxy $haproxy_flags -f ${haproxy_config_file:-"${workdir}/../etc/haproxy.conf"} &
 
     pid="$!"
     echo "$pid" > "$haproxy_pid_file"
@@ -37,6 +34,6 @@ if [[ $1 == run_service ]]; then
 fi
 
 if [[ $1 == cleanup ]]; then
-    pkill -f 'haproxy.*please/src/config/haproxy.conf'
+    pkill -f 'haproxy.*haproxy.conf'
     rm -f "$haproxy_pid_file"
 fi

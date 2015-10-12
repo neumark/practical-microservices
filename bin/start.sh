@@ -1,9 +1,12 @@
 #! /usr/bin/env bash
 
+function kill_by_pid() {
+    for i in `ls etc/*.pid`; do echo "killing $i"; kill -TERM `cat $i`; rm $i; done
+}
 DIR=`dirname $0`
 SCREENRC="${DIR}/../etc/screen.rc"
 # run servers
+kill_by_pid
 screen -c $SCREENRC
-eval "${DIR}/bin/haproxy.sh cleanup"
-
-#python virtualenv/bin/gunicorn --access-logfile - -b 127.0.0.1:9000 -w 1 -t 0 'fibpro.fibpro:app'
+kill_by_pid
+eval "${DIR}/haproxy.sh cleanup"

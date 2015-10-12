@@ -10,14 +10,6 @@ termcapinfo * ti@:te@
 hardstatus alwayslastline '%{= wk}%?%-Lw%?%{r}(%{k}%n*%f%t%?(%u)%?%{r})%{k}%?%+Lw%?%?%= %m/%d %C%A'
 activity ''
 
-screen -t authservice_8087 sh -c '/Users/neumark/git/prezi/please/src/repos/authservice.sh run_service'
-screen -t dynapps_8008 sh -c '/Users/neumark/git/prezi/please/src/repos/dynapps.sh run_service'
-screen -t landingdjango_8016 sh -c '/Users/neumark/git/prezi/please/src/repos/landingdjango.sh run_service'
-screen -t login_8018 sh -c '/Users/neumark/git/prezi/please/src/repos/login.sh run_service'
-screen -t media_8005 sh -c '/Users/neumark/git/prezi/please/src/repos/media.sh run_service'
-screen -t meetingservice_18000 sh -c '/Users/neumark/git/prezi/please/src/repos/meeting-service.sh run_service'
-screen -t unionserver_9100 sh -c '/Users/neumark/git/prezi/please/src/repos/meeting-unionserver.sh run_service'
-screen -t paymentservice_9080 sh -c '/Users/neumark/git/prezi/please/src/repos/paymentservice.sh run_service'
-screen -t presentationservice_8086 sh -c '/Users/neumark/git/prezi/please/src/repos/presentationservice.sh run_service'
-screen -t zuisite_8009 sh -c '/Users/neumark/git/prezi/please/src/repos/zuisite.sh run_service'
-screen -t haproxy_8000 sh -c '/Users/neumark/git/prezi/please/src/config/haproxy.sh run_service'
+screen -t fibfrontend_9001 sh -c "python virtualenv/bin/gunicorn --access-logfile - -b 127.0.0.1:9001 -w 1 -p etc/fibfrontend.pid 'fibpro.fibpro:app'; exec bash"
+screen -t logsink_9002 sh -c "python virtualenv/bin/gunicorn -b 127.0.0.1:9002 -w 1 -p etc/logsink.pid 'fibpro.logsink:LogSinkServer().app()'; exec bash"
+screen -t haproxy_9000 sh -c "./bin/haproxy.sh run_service"

@@ -6,8 +6,9 @@ from raven.middleware import Sentry
 from const import SENTRY_DSN
 from http_basic import HTTPBasic
 from user_db import init_user_db, get_user
-from util import log, http_response
+from util import http_response
 from pricing import update_user_credit
+from logsink import log
 
 init_user_db()
 

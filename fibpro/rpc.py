@@ -4,12 +4,15 @@ from raven import Client
 from raven.middleware import Sentry
 # fibpro modules
 from const import SENTRY_DSN
-from util import (log, http_response,
+from util import (http_response,
     get_default_endpoints, urlsafe_base64_encode,
     urlsafe_base64_decode)
 import base64
 import json
 import requests
+from logging import getLogger
+
+log = getLogger('gunicorn.error')
 
 class ServerConfig(object):
     def __init__(self):
@@ -18,6 +21,7 @@ class ServerConfig(object):
 class RPCBase(object):
 
     ARG_PREFIX = '?req='
+    DEBUG = False
 
     def encode_result(self, result):
         return json.dumps(
@@ -37,7 +41,6 @@ class RPCBase(object):
                 }))
 
     def decode_arguments(self, encoded_data):
-        print encoded_data
         data = json.loads(urlsafe_base64_decode(encoded_data))
         return data['method'], data['args']
 
@@ -50,8 +53,9 @@ class Server(RPCBase):
         try:
             method, args = self.decode_arguments(
                 environ['QUERY_STRING'][(len(self.ARG_PREFIX)-1):])
-            log.info('RPC request: %s(**%s)' % (
-                method, self.encode_result(args)))
+            if self.DEBUG:
+                log.info('RPC request: %s(**%s)' % (
+                    method, self.encode_result(args)))
         except ValueError, e:
             log.warn('Request to %s resulted in %s' % (
                 environ['PATH_INFO'], str(e)))
@@ -69,8 +73,8 @@ class Server(RPCBase):
 
 class Client(RPCBase):
 
-    def __init__(self, server_config):
-        self.server_config = server_config
+    def __init__(self, server_config=None):
+        self.server_config = server_config or ServerConfig()
 
     def construct_url(self, service, method, args):
         return "%s%s%s" % (

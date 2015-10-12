@@ -1,5 +1,5 @@
 from math import log as logarithm, floor
-from util import log
+from logsink import log
 
 def price_request(requested_fib):
     return int(floor(logarithm(requested_fib,10))) + 1

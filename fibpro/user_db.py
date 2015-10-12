@@ -1,5 +1,6 @@
 from const import USER_DB_FILE
-from util import load_config, log
+from util import load_config
+from logsink import log
 
 USERS = {}
 
