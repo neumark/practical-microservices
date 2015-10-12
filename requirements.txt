@@ -1,4 +1,4 @@
 gunicorn==19.3.0
-pep8==1.6.2
 raven==5.7.2
-wsgiref==0.1.2
+requests==2.8.0
+six==1.10.0
