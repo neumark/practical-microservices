@@ -1,7 +1,9 @@
 from rpc import Client, Server, ServerConfig, DynamicObject
 from const import USER_DB_FILE
 from util import load_config
-from logsink import log
+# needs to be imported for client constructor
+# to register itself
+from logsink import LogSinkClient
 
 class UserStoreBase(object):
     NAME = "userstore"
@@ -12,11 +14,12 @@ class UserStoreServer(UserStoreBase, Server):
     def __init__(self):
         self.users = {}
         self.credit = {}
+        self.log = self.get_client('logsink')
         self._init_user_db()
 
     def _add_user(self, user_dict):
         self.users[user_dict['username']] = user_dict
-        log.info("Added user: %s" % str(user_dict))
+        self.log.info("Added user: %s" % str(user_dict))
 
     def _init_user_db(self, filename=USER_DB_FILE):
         raw_user_list = load_config(filename)['users']

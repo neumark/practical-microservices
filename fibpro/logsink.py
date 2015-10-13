@@ -11,7 +11,9 @@ class LogSinkServer(LogSinkBase, Server):
     # runs in the logsink process
     def recv_log(self, message=None, level='info'):
         if message:
-            getattr(self.log, level)(message)
+            source = getattr(self.get_threadlocal(), "meta", {}).get('source', 'unknown')
+            getattr(self.log, level)(
+                "[%s] %s" % (source, message))
             return True
         return False
 
