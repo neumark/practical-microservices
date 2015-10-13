@@ -9,6 +9,7 @@ import sys
 import traceback
 from logging import getLogger
 from threading import local
+from urlparse import parse_qs
 # fibpro modules
 from const import DEFAULT_SENTRY_DSN
 from servicedir import get_default_endpoints
@@ -32,12 +33,16 @@ class RemoteException(Exception):
     pass
 
 class ServerConfig(object):
+
     def __init__(self):
         self.endpoints = get_default_endpoints()
 
+    def get_endpoint(self, service):
+        return self.endpoints[service]
+
 class RPCBase(object):
 
-    ARG_PREFIX = '?req='
+    REQ_PARAM = 'req'
     LOG_RPC = False
 
     def log_rpc(self, from_service, to_service, method, args):
@@ -93,8 +98,9 @@ class Server(RPCBase):
     SENTRY_DSN =  DEFAULT_SENTRY_DSN
 
     def wsgi_app(self, environ, start_response):
+        query_dict = parse_qs(environ['QUERY_STRING'])
         method, args, request_meta = self.decode_arguments(
-            environ['QUERY_STRING'][(len(self.ARG_PREFIX)-1):])
+            query_dict[self.REQ_PARAM][0])
         self.log_rpc(
             request_meta.get('source', 'unknown'),
             self.NAME, method, args)
@@ -122,9 +128,9 @@ class Client(RPCBase):
         self.server_config = server_config or ServerConfig()
 
     def construct_url(self, method, args, service):
-        return "%s%s%s" % (
-            self.server_config.endpoints[service],
-            self.ARG_PREFIX,
+        return "%s?%s=%s" % (
+            self.server_config.get_endpoint(service),
+            self.REQ_PARAM,
             self.encode_arguments(method, args))
 
     def return_or_raise(self, response):
