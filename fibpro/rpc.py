@@ -9,7 +9,7 @@ import sys
 import traceback
 from logging import getLogger
 # fibpro modules
-from const import SENTRY_DSN
+from const import DEFAULT_SENTRY_DSN
 from util import (http_response,
     get_default_endpoints, urlsafe_base64_encode,
     urlsafe_base64_decode)
@@ -26,7 +26,7 @@ class ServerConfig(object):
 class RPCBase(object):
 
     ARG_PREFIX = '?req='
-    DEBUG = False
+    LOG_RPC = False
 
     def encode_data(self, data):
         return json.dumps(
@@ -60,6 +60,9 @@ class RPCBase(object):
         return data['method'], data['args']
 
 class Server(RPCBase):
+
+    NAME = "unknown"
+    SENTRY_DSN =  DEFAULT_SENTRY_DSN
         
     def ping(self):
         return "pong"
@@ -67,9 +70,9 @@ class Server(RPCBase):
     def wsgi_app(self, environ, start_response):
         method, args = self.decode_arguments(
             environ['QUERY_STRING'][(len(self.ARG_PREFIX)-1):])
-        if self.DEBUG:
-            log.info('RPC request: %s(**%s)' % (
-                method, self.encode_result(args)))
+        if self.LOG_RPC:
+            log.info('RPC server executing: %s:%s(**%s)' % (
+                self.NAME, method, self.encode_result(args)))
         try:
             body = self.encode_result(
                 getattr(self, method)(**args))
@@ -80,14 +83,16 @@ class Server(RPCBase):
 
     def app(self):
         return Sentry(self.wsgi_app,
-            RavenClient(SENTRY_DSN))
+            RavenClient(self.SENTRY_DSN))
 
 class Client(RPCBase):
+
+    NAME = "unknown"
 
     def __init__(self, server_config=None):
         self.server_config = server_config or ServerConfig()
 
-    def construct_url(self, service, method, args):
+    def construct_url(self, method, args, service):
         return "%s%s%s" % (
             self.server_config.endpoints[service],
             self.ARG_PREFIX,
@@ -98,10 +103,20 @@ class Client(RPCBase):
             return response['result']
         raise RemoteException(response['traceback'])
 
-    def call(self, service, method, args=None):
-        url = self.construct_url(service, method, args or {})
+    def call(self, method, args=None, service=None):
+        args = args or {}
+        service = service or self.NAME
+        url = self.construct_url(
+            method, args, service)
+        if self.LOG_RPC:
+            log.info("RPC client calling %s:%s(**%s)" % (
+                service, method, str(args)))
         return self.return_or_raise(
             self.decode_result(requests.get(url).text))
 
-    def ping(self, service):
-        return self.call(service, 'ping')
+    def ping(self):
+        return self.call('ping')
+
+class DynamicObject:
+    def __init__(self, **fields):
+        self.__dict__.update(fields)

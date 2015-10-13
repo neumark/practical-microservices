@@ -3,14 +3,14 @@
 from raven import Client
 from raven.middleware import Sentry
 # fibpro modules
-from const import SENTRY_DSN
+from const import DEFAULT_SENTRY_DSN
 from http_basic import HTTPBasic
-from user_db import init_user_db, get_user
+from userstore import UserStoreClient
 from util import http_response
 from pricing import update_user_credit
 from logsink import log
 
-init_user_db()
+userstore_client = UserStoreClient()
 
 def fib(n):
     a, b = 0, 1
@@ -47,5 +47,5 @@ def fib_app(environ, start_response):
         body=fib(requested_fib))
 
 app = Sentry(
-    HTTPBasic(fib_app, get_user),
-    Client(SENTRY_DSN))
+    HTTPBasic(fib_app, userstore_client),
+    Client(DEFAULT_SENTRY_DSN))

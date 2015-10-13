@@ -3,9 +3,9 @@ from logsink import log
 
 class HTTPBasic(object):
 
-    def __init__(self, app, get_user, realm='Website'):
+    def __init__(self, app, userstore_client, realm='Website'):
         self.app = app
-        self.get_user = get_user
+        self.userstore_client = userstore_client
         self.realm = realm
 
     def __call__(self, environ, start_response):
@@ -18,7 +18,7 @@ class HTTPBasic(object):
             scheme, data = auth.split(None, 1)
             assert scheme.lower() == 'basic'
             username, password = data.decode('base64').split(':', 1)
-            user_obj = self.get_user(username)
+            user_obj = self.userstore_client.get_user(username)
             if  user_obj is None or user_obj.password != password:
                 return self.bad_auth(environ, start_response)
             environ['REMOTE_USER'] = user_obj

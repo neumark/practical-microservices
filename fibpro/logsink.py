@@ -1,8 +1,10 @@
 from rpc import Client, Server, ServerConfig
 from logging import getLogger
 
+class LogSinkBase(object):
+    NAME = "logsink"
 
-class LogSinkServer(Server):
+class LogSinkServer(LogSinkBase, Server):
 
     log = getLogger('gunicorn.error')
 
@@ -13,10 +15,10 @@ class LogSinkServer(Server):
             return True
         return False
 
-class LogSinkClient(Client):
+class LogSinkClient(LogSinkBase, Client):
     # runs in the client process
     def send_log(self, message, level='info'):
-        return self.call('logsink', 'recv_log', {
+        return self.call('recv_log', {
             'message': message,
             'level': level})
 
