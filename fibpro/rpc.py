@@ -2,17 +2,22 @@
 # dependencies
 from raven import Client as RavenClient
 from raven.middleware import Sentry
+import base64
+import json
+import requests
+import sys
+import traceback
+from logging import getLogger
 # fibpro modules
 from const import SENTRY_DSN
 from util import (http_response,
     get_default_endpoints, urlsafe_base64_encode,
     urlsafe_base64_decode)
-import base64
-import json
-import requests
-from logging import getLogger
 
 log = getLogger('gunicorn.error')
+
+class RemoteException(Exception):
+    pass
 
 class ServerConfig(object):
     def __init__(self):
@@ -23,18 +28,28 @@ class RPCBase(object):
     ARG_PREFIX = '?req='
     DEBUG = False
 
-    def encode_result(self, result):
+    def encode_data(self, data):
         return json.dumps(
-            result,
+            data,
             separators=(',', ':'),
             sort_keys=True)
+
+    def encode_result(self, result):
+        return self.encode_data({
+                'result': result
+            })
+
+    def encode_exception(self, traceback):
+        return self.encode_data({
+                'traceback': traceback
+            })
 
     def decode_result(self, response):
         return json.loads(response)
 
     def encode_arguments(self, method, args):
         return urlsafe_base64_encode(
-            self.encode_result(
+            self.encode_data(
                 {
                     'method': method,
                     'args': args
@@ -55,9 +70,13 @@ class Server(RPCBase):
         if self.DEBUG:
             log.info('RPC request: %s(**%s)' % (
                 method, self.encode_result(args)))
-        returned = getattr(self, method)(**args)
+        try:
+            body = self.encode_result(
+                getattr(self, method)(**args))
+        except Exception, e:
+            body = self.encode_exception(traceback.format_exc())
         return http_response(start_response,
-            body=self.encode_result(returned))
+            body=body)
 
     def app(self):
         return Sentry(self.wsgi_app,
@@ -74,9 +93,15 @@ class Client(RPCBase):
             self.ARG_PREFIX,
             self.encode_arguments(method, args))
 
+    def return_or_raise(self, response):
+        if 'result' in response:
+            return response['result']
+        raise RemoteException(response['traceback'])
+
     def call(self, service, method, args=None):
         url = self.construct_url(service, method, args or {})
-        return self.decode_result(requests.get(url).text)
+        return self.return_or_raise(
+            self.decode_result(requests.get(url).text))
 
     def ping(self, service):
         return self.call(service, 'ping')
