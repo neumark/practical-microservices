@@ -1,4 +1,4 @@
-from rpc import Client, Server, ServerConfig
+from rpc import Client, Server, ServerConfig, get_threadlocal
 from logging import getLogger
 
 class LogSinkBase(object):
@@ -11,7 +11,7 @@ class LogSinkServer(LogSinkBase, Server):
     # runs in the logsink process
     def recv_log(self, message=None, level='info'):
         if message:
-            source = getattr(self.get_threadlocal(), "meta", {}).get('source', 'unknown')
+            source = getattr(get_threadlocal(), "request_meta", {}).get('source', 'unknown')
             getattr(self.log, level)(
                 "[%s] %s" % (source, message))
             return True

@@ -11,14 +11,19 @@ from logging import getLogger
 from threading import local
 # fibpro modules
 from const import DEFAULT_SENTRY_DSN
-from servicedir import (get_default_endpoints,
-    register_client_constructor,
-    get_client_constructor)
+from servicedir import get_default_endpoints
 from util import (http_response,
     urlsafe_base64_encode,
     urlsafe_base64_decode)
 
 log = getLogger('gunicorn.error')
+_threadlocal = None
+
+def get_threadlocal():
+    global _threadlocal
+    if not _threadlocal:
+        _threadlocal = local()
+    return _threadlocal
 
 class RemoteException(Exception):
     pass
@@ -55,7 +60,7 @@ class RPCBase(object):
         return urlsafe_base64_encode(
             self.encode_data(
                 {
-                    'meta': {
+                    'request_meta': {
                         'source': source},
                     'method': method,
                     'args': args
@@ -63,29 +68,24 @@ class RPCBase(object):
 
     def decode_arguments(self, encoded_data):
         data = json.loads(urlsafe_base64_decode(encoded_data))
-        return data['method'], data['args'], data.get('meta', {})
+        return data['method'], data['args'], data.get('request_meta', {})
 
 class Server(RPCBase):
 
     NAME = "unknown"
     SENTRY_DSN =  DEFAULT_SENTRY_DSN
 
-    def get_threadlocal(self):
-        if not hasattr(self, '_threadlocal'):
-            self._threadlocal = local()
-        return self._threadlocal
+    def set_server_name(self):
+        setattr(get_threadlocal(), "server_name", self.NAME)
 
-    def get_client(self, service, server_config=None):
-        return get_client_constructor(service)(self.NAME, server_config)
-        
     def wsgi_app(self, environ, start_response):
-        method, args, meta = self.decode_arguments(
+        method, args, request_meta = self.decode_arguments(
             environ['QUERY_STRING'][(len(self.ARG_PREFIX)-1):])
         if self.LOG_RPC:
             log.info('RPC server executing: %s:%s(**%s)' % (
                 self.NAME, method, self.encode_result(args)))
         try:
-            setattr(self.get_threadlocal(), "meta", meta)
+            setattr(get_threadlocal(), "request_meta", request_meta)
             result = getattr(self, method)(**args)
             body = self.encode_result(result)
         except Exception, e:
@@ -100,24 +100,19 @@ class Server(RPCBase):
     def ping(self):
         return "pong"
 
-class ClientMetaclass(type):
-    def __init__(cls, name, bases, class_dict):
-         register_client_constructor(cls.NAME, cls)
-
 class Client(RPCBase):
-    __metaclass__ = ClientMetaclass
 
     NAME = "unknown"
 
-    def __init__(self, source=None, server_config=None):
-        self.source = source or "unknown"
+    def __init__(self, server_config=None):
         self.server_config = server_config or ServerConfig()
 
     def construct_url(self, method, args, service):
+        source = getattr(get_threadlocal(), "server_name", "unknown")
         return "%s%s%s" % (
             self.server_config.endpoints[service],
             self.ARG_PREFIX,
-            self.encode_arguments(method, args, self.source))
+            self.encode_arguments(method, args, source))
 
     def return_or_raise(self, response):
         if 'result' in response:
