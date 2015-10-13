@@ -10,7 +10,7 @@ termcapinfo * ti@:te@
 hardstatus alwayslastline '%{= wk}%?%-Lw%?%{r}(%{k}%n*%f%t%?(%u)%?%{r})%{k}%?%+Lw%?%?%= %m/%d %C%A'
 activity ''
 
-screen -t fibfrontend_9001 sh -c "python virtualenv/bin/gunicorn --access-logfile - -t 0 -b 127.0.0.1:9001 -w 1 -p etc/fibfrontend.pid 'fibpro.fibpro:app'; exec bash"
+screen -t fibfrontend_9001 sh -c "python virtualenv/bin/gunicorn --access-logfile - -t 0 -b 127.0.0.1:9001 -w 1 -p etc/fibfrontend.pid 'fibpro.fibfrontend:FibFrontendServer().app()'; exec bash"
 screen -t logsink_9002 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9002 -w 1 -p etc/logsink.pid 'fibpro.logsink:LogSinkServer().app()'; exec bash"
 screen -t userstore_9003 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9003 -w 1 -p etc/userstore.pid 'fibpro.userstore:UserStoreServer().app()'; exec bash"
 screen -t haproxy_9000 sh -c "./bin/haproxy.sh run_service"

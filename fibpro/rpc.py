@@ -25,6 +25,9 @@ def get_threadlocal():
         _threadlocal = local()
     return _threadlocal
 
+def get_request_meta():
+    return getattr(get_threadlocal(), "request_meta", {})
+
 class RemoteException(Exception):
     pass
 
@@ -36,6 +39,20 @@ class RPCBase(object):
 
     ARG_PREFIX = '?req='
     LOG_RPC = False
+
+    def log_rpc(self, from_service, to_service, method, args):
+        if self.LOG_RPC:
+            log.info("RPC %s->%s:%s(**%s)" % (
+                from_service,
+                to_service,
+                method,
+                str(args)))
+
+    def set_server_name(self):
+        setattr(get_threadlocal(), "server_name", self.NAME)
+
+    def get_server_name(self):
+        return getattr(get_threadlocal(), "server_name", "unknown")
 
     def encode_data(self, data):
         return json.dumps(
@@ -56,12 +73,12 @@ class RPCBase(object):
     def decode_result(self, response):
         return json.loads(response)
 
-    def encode_arguments(self, method, args, source):
+    def encode_arguments(self, method, args):
         return urlsafe_base64_encode(
             self.encode_data(
                 {
                     'request_meta': {
-                        'source': source},
+                        'source': self.get_server_name()},
                     'method': method,
                     'args': args
                 }))
@@ -75,17 +92,14 @@ class Server(RPCBase):
     NAME = "unknown"
     SENTRY_DSN =  DEFAULT_SENTRY_DSN
 
-    def set_server_name(self):
-        setattr(get_threadlocal(), "server_name", self.NAME)
-
     def wsgi_app(self, environ, start_response):
         method, args, request_meta = self.decode_arguments(
             environ['QUERY_STRING'][(len(self.ARG_PREFIX)-1):])
-        if self.LOG_RPC:
-            log.info('RPC server executing: %s:%s(**%s)' % (
-                self.NAME, method, self.encode_result(args)))
+        self.log_rpc(
+            request_meta.get('source', 'unknown'),
+            self.NAME, method, args)
+        setattr(get_threadlocal(), "request_meta", request_meta)
         try:
-            setattr(get_threadlocal(), "request_meta", request_meta)
             result = getattr(self, method)(**args)
             body = self.encode_result(result)
         except Exception, e:
@@ -108,11 +122,10 @@ class Client(RPCBase):
         self.server_config = server_config or ServerConfig()
 
     def construct_url(self, method, args, service):
-        source = getattr(get_threadlocal(), "server_name", "unknown")
         return "%s%s%s" % (
             self.server_config.endpoints[service],
             self.ARG_PREFIX,
-            self.encode_arguments(method, args, source))
+            self.encode_arguments(method, args))
 
     def return_or_raise(self, response):
         if 'result' in response:
@@ -124,9 +137,8 @@ class Client(RPCBase):
         service = service or self.NAME
         url = self.construct_url(
             method, args, service)
-        if self.LOG_RPC:
-            log.info("RPC client calling %s:%s(**%s)" % (
-                service, method, str(args)))
+        self.log_rpc(
+            self.get_server_name(), service, method, args)
         return self.return_or_raise(
             self.decode_result(requests.get(url).text))
 
