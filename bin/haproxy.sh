@@ -6,12 +6,7 @@ haproxy_pid_file="$workdir/../etc/haproxy.pid"
 
 if [[ $1 == run_service ]]; then
     echo "Running local router haproxy on localhost:$haproxy_port"
-
-    if [ -n "$haproxy_debug" ]; then
-        haproxy_flags='-d'
-    else
-        haproxy_flags='-db'
-    fi
+    haproxy_flags='-db -d'
 
     if [[ -f $haproxy_pid_file ]]; then
         pid="$(cat "$haproxy_pid_file")"
@@ -31,9 +26,4 @@ if [[ $1 == run_service ]]; then
     pid="$!"
     echo "$pid" > "$haproxy_pid_file"
     fg
-fi
-
-if [[ $1 == cleanup ]]; then
-    pkill -f 'haproxy.*haproxy.conf'
-    rm -f "$haproxy_pid_file"
 fi

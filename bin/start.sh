@@ -9,4 +9,3 @@ SCREENRC="${DIR}/../etc/screen.rc"
 kill_by_pid
 screen -c $SCREENRC
 kill_by_pid
-eval "${DIR}/haproxy.sh cleanup"
