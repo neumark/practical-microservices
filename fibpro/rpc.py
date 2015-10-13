@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # dependencies
-from raven import Client
+from raven import Client as RavenClient
 from raven.middleware import Sentry
 # fibpro modules
 from const import SENTRY_DSN
@@ -50,26 +50,18 @@ class Server(RPCBase):
         return "pong"
 
     def wsgi_app(self, environ, start_response):
-        try:
-            method, args = self.decode_arguments(
-                environ['QUERY_STRING'][(len(self.ARG_PREFIX)-1):])
-            if self.DEBUG:
-                log.info('RPC request: %s(**%s)' % (
-                    method, self.encode_result(args)))
-        except ValueError, e:
-            log.warn('Request to %s resulted in %s' % (
-                environ['PATH_INFO'], str(e)))
-            return http_response(start_response,
-                status="404 NOT FOUND",
-                body=str(e))
-        # TODO: no such method?
-        # TODO: try-except
+        method, args = self.decode_arguments(
+            environ['QUERY_STRING'][(len(self.ARG_PREFIX)-1):])
+        if self.DEBUG:
+            log.info('RPC request: %s(**%s)' % (
+                method, self.encode_result(args)))
         returned = getattr(self, method)(**args)
         return http_response(start_response,
             body=self.encode_result(returned))
 
     def app(self):
-        return self.wsgi_app
+        return Sentry(self.wsgi_app,
+            RavenClient(SENTRY_DSN))
 
 class Client(RPCBase):
 
@@ -82,9 +74,9 @@ class Client(RPCBase):
             self.ARG_PREFIX,
             self.encode_arguments(method, args))
 
-    def call(self, service, method, args):
-        url = self.construct_url(service, method, args)
+    def call(self, service, method, args=None):
+        url = self.construct_url(service, method, args or {})
         return self.decode_result(requests.get(url).text)
 
     def ping(self, service):
-        return self.call(service, 'ping', {})
+        return self.call(service, 'ping')
