@@ -12,23 +12,26 @@ class UserStoreBase(object):
 class UserStoreServer(UserStoreBase, Server):
 
     def __init__(self):
+        self.set_server_name()
         self.users = {}
         self.credit = {}
-        self.log = self.get_client('logsink')
+        self.log = LogSinkClient()
         self._init_user_db()
 
-    def _add_user(self, user_dict):
+    def _add_user(self, user_dict, credit):
         self.users[user_dict['username']] = user_dict
-        self.log.info("Added user: %s" % str(user_dict))
+        self.set_credit(user_dict['username'], credit)
+        self.log.info("Added user: %s with credit %s" % (
+            str(user_dict), credit))
 
     def _init_user_db(self, filename=USER_DB_FILE):
         raw_user_list = load_config(filename)['users']
         for raw_user in raw_user_list:
             username, password, credit = raw_user
-            self._add_user(dict(
-                username=username,
-                password=password))
-            self.set_credit(username, credit)
+            self._add_user(
+                dict(username=username,
+                    password=password),
+                credit)
 
     def get_user(self, username=None):
         return self.users.get(username, {})
