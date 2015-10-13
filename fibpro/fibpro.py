@@ -33,12 +33,6 @@ def fib_app(environ, start_response):
     # verify and update user credit
     credit_ok = update_user_credit(requested_fib, user_obj)
     if credit_ok != True:
-        # log and return error if credit insufficient
-        log.info(
-                'User "%s" denied fib(%s), credit: %s' % (
-            user_obj.username,
-            requested_fib,
-            user_obj.credit))
         return http_response(start_response,
                 status="403 FORBIDDEN",
                 body=credit_ok)
