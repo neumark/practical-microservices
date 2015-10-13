@@ -1,4 +1,4 @@
-from rpc import Client, Server, ServerConfig, get_threadlocal
+from rpc import Client, Server, ServerConfig, get_threadlocal, get_request_meta
 from logging import getLogger
 
 class LogSinkBase(object):
@@ -8,17 +8,16 @@ class LogSinkServer(LogSinkBase, Server):
 
     log = getLogger('gunicorn.error')
 
-    # runs in the logsink process
     def recv_log(self, message=None, level='info'):
         if message:
-            source = getattr(get_threadlocal(), "request_meta", {}).get('source', 'unknown')
+            source = get_request_meta().get('source', 'unknown')
             getattr(self.log, level)(
                 "[%s] %s" % (source, message))
             return True
         return False
 
 class LogSinkClient(LogSinkBase, Client):
-    # runs in the client process
+    
     def send_log(self, message, level='info'):
         return self.call('recv_log', {
             'message': message,
