@@ -40,6 +40,9 @@ class ServerConfig(object):
     def get_endpoint(self, service):
         return self.endpoints[service]
 
+    def get_services(self):
+        return self.endpoints.keys()
+
 class RPCBase(object):
 
     REQ_PARAM = 'req'
