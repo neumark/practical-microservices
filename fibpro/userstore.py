@@ -20,9 +20,9 @@ class UserStoreServer(UserStoreBase, Server):
 
     def _add_user(self, user_dict, credit):
         self.users[user_dict['username']] = user_dict
-        self.set_credit(user_dict['username'], credit)
         self.log.info("Added user: %s with credit %s" % (
             str(user_dict), credit))
+        self.set_credit(user_dict['username'], credit)
 
     def _init_user_db(self, filename=USER_DB_FILE):
         raw_user_list = load_config(filename)['users']
@@ -40,12 +40,16 @@ class UserStoreServer(UserStoreBase, Server):
         if username is None or credit is None:
             return False
         self.credit[username] = credit
+        self.log.info("Credit for %s set to %s" % (
+            username, credit))
         return True
 
     def increment_credit(self, username=None, increment_by=0):
         if username is None or username not in self.credit:
             return False
         self.credit[username] += increment_by
+        self.log.info("Credit for %s incremented %s yielding %s" % (
+            username, increment_by, self.credit[username]))
         return self.credit[username]
 
     def get_credit(self, username=None):

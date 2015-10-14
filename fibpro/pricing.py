@@ -18,9 +18,9 @@ def update_user_credit(requested_fib, user_obj):
             credit))
         return "Error: fib(%s) costs %s, user %s has insufficient credit(%s)" % (
             requested_fib, request_cost, user_obj.username, credit)
-    userstore_client.increment_credit(
+    new_credit = userstore_client.increment_credit(
         user_obj.username, -1 * request_cost)
     log.info("%s used %s credit, balance: %s" % (
-        user_obj.username, request_cost, credit))
+        user_obj.username, request_cost, new_credit))
     return True
 
