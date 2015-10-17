@@ -1,8 +1,33 @@
-# based on: http://wsgi.readthedocs.org/en/latest/specifications/simple_authentication.html
-from logsink import log
+import random
+from util import get_threadlocal
+
+def generate_request_id():
+    return ("r%16x" % random.getrandbits(63)).replace(' ', '0')
+
+def set_request_id(request_id=None):
+    request_id  = request_id or generate_request_id()
+    setattr(get_threadlocal(), "request_id", request_id)
+    return request_id 
+
+def get_request_id():
+    return getattr(get_threadlocal(), "request_id", None)
+
+def http_response(start_response, status="200 OK", body=""):
+    body_str = str(body)
+    headers = [
+        ("Content-Type", "text/plain"),
+        ("Content-Length", 
+            str(len(body_str)))
+    ]
+    # add request id for gunicorn access log
+    request_id = get_request_id()
+    if request_id:
+        headers.append(("x-request-id", request_id))
+    start_response(status, headers)
+    return iter([body_str])
 
 class HTTPBasic(object):
-
+    # based on: http://wsgi.readthedocs.org/en/latest/specifications/simple_authentication.html
     def __init__(self, app, userstore_client, realm='Website'):
         self.app = app
         self.userstore_client = userstore_client

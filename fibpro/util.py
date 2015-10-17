@@ -2,6 +2,15 @@ import json
 from const import HOSTNAME
 import base64
 import six
+from threading import local
+
+_threadlocal = None
+
+def get_threadlocal():
+    global _threadlocal
+    if not _threadlocal:
+        _threadlocal = local()
+    return _threadlocal
 
 def load_config(config_file=None):
     config = {}
@@ -15,23 +24,6 @@ def load_config(config_file=None):
         with open(filename, "r") as f:
             config.update(json.loads(f.read()))
     return config
-
-def http_response(start_response, status="200 OK", body=""):
-    body_str = str(body)
-    start_response(status, [
-        ("Content-Type", "text/plain"),
-        ("Content-Length", 
-            str(len(body_str)))
-    ])
-    return iter([body_str])
-
-def get_default_endpoints():
-    # ignore env for now
-    return {
-        'logsink': "http://{}/api/logsink/".format(HOSTNAME),
-        'userstore': "http://{}/api/userstore/".format(HOSTNAME),
-        'compute': "http://{}/api/compute/".format(HOSTNAME),
-        'pricing': "http://{}/api/pricing/".format(HOSTNAME)}
 
 # Copied from django source: https://docs.djangoproject.com/en/1.8/_modules/django/utils/http/#urlsafe_base64_encode
 def urlsafe_base64_encode(s):
@@ -53,6 +45,7 @@ def urlsafe_base64_decode(s):
     except (LookupError, BinasciiError) as e:
         raise ValueError(e)
 
+# Copied from django source
 def force_bytes(s, encoding='utf-8', strings_only=False, errors='strict'):
     """
     Similar to smart_bytes, except that lazy instances are resolved to

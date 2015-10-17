@@ -3,9 +3,8 @@ from raven import Client as RavenClient
 from raven.middleware import Sentry
 from const import DEFAULT_SENTRY_DSN
 from rpc import Server
-from http_basic import HTTPBasic
+from http import HTTPBasic, http_response, set_request_id
 from userstore import UserStoreClient
-from util import http_response
 from pricing import update_user_credit
 from logsink import log
 
@@ -24,6 +23,7 @@ class FibFrontendServer(Server):
         return a
 
     def wsgi_app(self, environ, start_response):
+        set_request_id()
         # get user object
         user_obj = environ.get('REMOTE_USER')
         # parse integer fibonacci sequence index

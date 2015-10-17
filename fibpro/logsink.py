@@ -11,8 +11,9 @@ class LogSinkServer(LogSinkBase, Server):
     def recv_log(self, message=None, level='info'):
         if message:
             source = get_request_meta().get('source', 'unknown')
+            request_id = get_request_meta().get('request_id') or '-'
             getattr(self.log, level)(
-                "[%s] %s" % (source, message))
+                "[%s] %s %s" % (source, request_id, message))
             return True
         return False
 

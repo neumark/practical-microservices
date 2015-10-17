@@ -8,23 +8,16 @@ import requests
 import sys
 import traceback
 from logging import getLogger
-from threading import local
 from urlparse import parse_qs
 # fibpro modules
 from const import DEFAULT_SENTRY_DSN
 from servicedir import get_default_endpoints
-from util import (http_response,
-    urlsafe_base64_encode,
-    urlsafe_base64_decode)
+from http import (http_response, get_request_id,
+    set_request_id)
+from util import (urlsafe_base64_encode,
+    urlsafe_base64_decode, get_threadlocal)
 
 log = getLogger('gunicorn.error')
-_threadlocal = None
-
-def get_threadlocal():
-    global _threadlocal
-    if not _threadlocal:
-        _threadlocal = local()
-    return _threadlocal
 
 def get_request_meta():
     return getattr(get_threadlocal(), "request_meta", {})
@@ -50,7 +43,8 @@ class RPCBase(object):
 
     def log_rpc(self, from_service, to_service, method, args):
         if self.LOG_RPC:
-            log.info("RPC %s->%s:%s(**%s)" % (
+            log.info("RPC %s %s->%s:%s(**%s)" % (
+                get_request_id() or "-",
                 from_service,
                 to_service,
                 method,
@@ -81,12 +75,16 @@ class RPCBase(object):
     def decode_result(self, response):
         return json.loads(response)
 
+    def get_request_meta(self):
+        return {
+            'request_id': get_request_id(),
+            'source': self.get_server_name()}
+
     def encode_arguments(self, method, args):
         return urlsafe_base64_encode(
             self.encode_data(
                 {
-                    'request_meta': {
-                        'source': self.get_server_name()},
+                    'request_meta': self.get_request_meta(),
                     'method': method,
                     'args': args
                 }))
@@ -104,6 +102,7 @@ class Server(RPCBase):
         query_dict = parse_qs(environ['QUERY_STRING'])
         method, args, request_meta = self.decode_arguments(
             query_dict[self.REQ_PARAM][0])
+        set_request_id(request_meta.get('request_id'))
         self.log_rpc(
             request_meta.get('source', 'unknown'),
             self.NAME, method, args)
