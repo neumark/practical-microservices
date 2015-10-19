@@ -12,9 +12,6 @@ class PricingServer(PricingBase, Server):
 
     userstore_client = UserStoreClient()
 
-    def __init__(self):
-        self.set_server_name()
- 
     def price_request(self, requested_fib):
         return int(floor(logarithm(requested_fib,10))) + 1
 

@@ -12,15 +12,18 @@ from urlparse import parse_qs
 # fibpro modules
 from const import DEFAULT_SENTRY_DSN
 from servicedir import get_default_endpoints
-from http import (http_response, get_request_id,
-    set_request_id)
+from http import (http_response, get_request_id)
 from util import (urlsafe_base64_encode,
-    urlsafe_base64_decode, get_threadlocal)
+    urlsafe_base64_decode, get_threadlocal,
+    dict_set, dict_get)
 
 log = getLogger('gunicorn.error')
 
 def get_request_meta():
-    return getattr(get_threadlocal(), "request_meta", {})
+    return dict_get(get_threadlocal(), ["request_meta"], {})
+
+def set_request_meta(request_meta):
+    dict_set(get_threadlocal(), ["request_meta"], request_meta)
 
 class RemoteException(Exception):
     pass
@@ -31,7 +34,13 @@ class ServerConfig(object):
         self.endpoints = get_default_endpoints()
 
     def get_endpoint(self, service):
-        return self.endpoints[service]
+        is_custom_endpoint = False
+        endpoint = self.endpoints.get(service)
+        custom_endpoint = get_request_meta().get('custom_endpoints', {}).get(service, None)
+        if custom_endpoint:
+            is_custom_endpoint = True
+            endpoint = custom_endpoint
+        return endpoint, is_custom_endpoint
 
     def get_services(self):
         return self.endpoints.keys()
@@ -51,10 +60,10 @@ class RPCBase(object):
                 str(args)))
 
     def set_server_name(self):
-        setattr(get_threadlocal(), "server_name", self.NAME)
+        dict_set(get_threadlocal(), ["server_name"], self.NAME)
 
     def get_server_name(self):
-        return getattr(get_threadlocal(), "server_name", "unknown")
+        return dict_get(get_threadlocal(), ["server_name"], "unknown")
 
     def encode_data(self, data):
         return json.dumps(
@@ -75,16 +84,16 @@ class RPCBase(object):
     def decode_result(self, response):
         return json.loads(response)
 
-    def get_request_meta(self):
-        return {
-            'request_id': get_request_id(),
-            'source': self.get_server_name()}
+    def get_request_meta_dict(self):
+        meta_dict = get_request_meta()
+        meta_dict['source'] = self.get_server_name()
+        return meta_dict
 
     def encode_arguments(self, method, args):
         return urlsafe_base64_encode(
             self.encode_data(
                 {
-                    'request_meta': self.get_request_meta(),
+                    'request_meta': self.get_request_meta_dict(),
                     'method': method,
                     'args': args
                 }))
@@ -98,22 +107,26 @@ class Server(RPCBase):
     NAME = "unknown"
     SENTRY_DSN =  DEFAULT_SENTRY_DSN
 
+    def __init__(self):
+        self.set_server_name()
+
     def wsgi_app(self, environ, start_response):
         query_dict = parse_qs(environ['QUERY_STRING'])
         method, args, request_meta = self.decode_arguments(
             query_dict[self.REQ_PARAM][0])
-        set_request_id(request_meta.get('request_id'))
+        set_request_meta(request_meta)
         self.log_rpc(
             request_meta.get('source', 'unknown'),
             self.NAME, method, args)
-        setattr(get_threadlocal(), "request_meta", request_meta)
         try:
             result = getattr(self, method)(**args)
             body = self.encode_result(result)
         except Exception, e:
             body = self.encode_exception(traceback.format_exc())
-        return http_response(start_response,
-            body=body)
+        response = http_response(start_response, body=body)
+        # clear request meta
+        set_request_meta({})
+        return response
 
     def app(self):
         return Sentry(self.wsgi_app,
@@ -130,8 +143,11 @@ class Client(RPCBase):
         self.server_config = server_config or ServerConfig()
 
     def construct_url(self, method, args, service):
+        endpoint, is_custom = self.server_config.get_endpoint(service)
+        if is_custom and self.LOG_RPC:
+            log.info("Using custom %s endpoint %s" % (service, endpoint))
         return "%s?%s=%s" % (
-            self.server_config.get_endpoint(service),
+            endpoint,
             self.REQ_PARAM,
             self.encode_arguments(method, args))
 

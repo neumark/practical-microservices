@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 from raven import Client as RavenClient
 from raven.middleware import Sentry
-from const import DEFAULT_SENTRY_DSN
-from rpc import Server
-from http import HTTPBasic, http_response, set_request_id
+from const import (DEFAULT_SENTRY_DSN,
+    ENDPOINT_OVERRIDE_PREFIX)
+from rpc import Server, get_request_meta
+from http import HTTPBasic, http_response, set_new_request_id
 from userstore import UserStoreClient
 from pricing import PricingClient
 from logsink import LogSinkClient
 from compute_worker import ComputeWorkerClient
+from urlparse import parse_qs
 
 class FibFrontendServer(Server):
 
@@ -29,10 +31,23 @@ class FibFrontendServer(Server):
                 environ['PATH_INFO'], str(e)))
             return None, "404 NOT FOUND", str(e)
 
+    def set_custom_endpoints(self, environ):
+        # custom enpoint information travels on in request_meta
+        query_dict = parse_qs(environ['QUERY_STRING'])
+        custom_endpoints = {}
+        for key in query_dict.keys():
+            if key.startswith(ENDPOINT_OVERRIDE_PREFIX):
+                endpoint = key[(len(ENDPOINT_OVERRIDE_PREFIX)):]
+                custom_endpoints[endpoint] = query_dict[key][-1]
+        get_request_meta()['custom_endpoints'] = custom_endpoints
+        self.log.info('Using custom endpoints: %s' % str(custom_endpoints))
+        return custom_endpoints
+
     def wsgi_app(self, environ, start_response):
-        set_request_id()
+        set_new_request_id()
         # get user object
         user_obj = environ.get('REMOTE_USER')
+        self.set_custom_endpoints(environ)
         requested_fib, status, body = self.get_requested_fib(environ)
         if requested_fib is not None:
             # verify and update user credit

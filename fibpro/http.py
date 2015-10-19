@@ -1,17 +1,16 @@
 import random
-from util import get_threadlocal
+from util import get_threadlocal, dict_set, dict_get
 
 def generate_request_id():
     return ("r%16x" % random.getrandbits(63)).replace(' ', '0')
 
-def set_request_id(request_id=None, force_none=False):
-    if not force_none and not request_id:
-        request_id = generate_request_id()
-    setattr(get_threadlocal(), "request_id", request_id)
+def set_new_request_id():
+    request_id = generate_request_id()
+    dict_set(get_threadlocal(), ["request_meta", "request_id"], request_id)
     return request_id 
 
 def get_request_id():
-    return getattr(get_threadlocal(), "request_id", None)
+    return dict_get(get_threadlocal(), ["request_meta", "request_id"], None)
 
 def http_response(start_response, status="200 OK", body=""):
     body_str = str(body)
@@ -25,11 +24,6 @@ def http_response(start_response, status="200 OK", body=""):
     if request_id:
         headers.append(("x-request-id", request_id))
     start_response(status, headers)
-    # Unset the request ID for this thread so
-    # requests potentially made from this thread
-    # unrelated to an incoming request are not logged
-    # under the request id of the last incoming request.
-    set_request_id(request_id=None, force_none=True)
     return iter([body_str])
 
 class HTTPBasic(object):

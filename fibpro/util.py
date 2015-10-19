@@ -10,7 +10,28 @@ def get_threadlocal():
     global _threadlocal
     if not _threadlocal:
         _threadlocal = local()
-    return _threadlocal
+        setattr(_threadlocal, 'data', {})
+    return getattr(_threadlocal, 'data')
+
+def dict_set(dictionary, key_path, value):
+    d = dictionary
+    for key in key_path[:-1]:
+        next_dict = d.get(key, {})
+        d[key] = next_dict
+        d= next_dict
+    d[key_path[-1]] = value
+    return dictionary
+
+def dict_get(dictionary, key_path, default_value=None):
+    for key in key_path[:-1]:
+        if key not in dictionary:
+            return default_value
+        dictionary = dictionary[key]
+    return dictionary.get(key_path[-1], default_value)
+
+
+
+
 
 def load_config(config_file=None):
     config = {}
