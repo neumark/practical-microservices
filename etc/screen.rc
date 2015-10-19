@@ -13,4 +13,5 @@ activity ''
 screen -t fibfrontend_9001 sh -c "python virtualenv/bin/gunicorn --access-logformat '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(T)s %(D)s %({x-request-id}o)s' --access-logfile - -t 0 -b 127.0.0.1:9001 -w 1 -p etc/fibfrontend.pid 'fibpro.fibfrontend:FibFrontendServer().app()'; exec bash"
 screen -t logsink_9002 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9002 -w 1 -p etc/logsink.pid 'fibpro.logsink:LogSinkServer().app()'; exec bash"
 screen -t userstore_9003 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9003 -w 1 -p etc/userstore.pid 'fibpro.userstore:UserStoreServer().app()'; exec bash"
+screen -t pricing_9004 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9004 -w 1 -p etc/pricing.pid 'fibpro.pricing:PricingServer().app()'; exec bash"
 screen -t haproxy_9000 sh -c "./bin/haproxy.sh run_service"

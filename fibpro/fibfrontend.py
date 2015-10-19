@@ -5,8 +5,8 @@ from const import DEFAULT_SENTRY_DSN
 from rpc import Server
 from http import HTTPBasic, http_response, set_request_id
 from userstore import UserStoreClient
-from pricing import update_user_credit
-from logsink import log
+from pricing import PricingClient
+from logsink import LogSinkClient
 
 class FibFrontendServer(Server):
 
@@ -14,7 +14,9 @@ class FibFrontendServer(Server):
     
     def __init__(self):
         self.set_server_name()
+        self.log = LogSinkClient()
         self.userstore_client = UserStoreClient()
+        self.pricing_client = PricingClient()
 
     def calculate_fib(self, n):
         a, b = 0, 1
@@ -30,17 +32,18 @@ class FibFrontendServer(Server):
         try:
             requested_fib = int(environ['PATH_INFO'][1:])
         except ValueError, e:
-            log.warn('Request to %s resulted in %s' % (
+            self.log.warn('Request to %s resulted in %s' % (
                 environ['PATH_INFO'], str(e)))
             return http_response(start_response,
                 status="404 NOT FOUND",
                 body=str(e))
         # verify and update user credit
-        credit_ok = update_user_credit(requested_fib, user_obj)
+        credit_ok, pricing_response = self.pricing_client.pay_for_user_request(
+            requested_fib, user_obj.username)
         if credit_ok != True:
             return http_response(start_response,
                     status="403 FORBIDDEN",
-                    body=credit_ok)
+                    body=pricing_response)
         # return requested fibonacci number
         return http_response(start_response,
             body=self.calculate_fib(requested_fib))
