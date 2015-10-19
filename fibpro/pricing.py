@@ -1,11 +1,11 @@
 from rpc import Client, Server, ServerConfig, get_threadlocal, get_request_meta
 from math import log as logarithm, floor
-from logsink import log
 from userstore import UserStoreClient
 from logsink import LogSinkClient
 
 class PricingBase(object):
     NAME = "pricing"
+    LOG_RPC = True
     log = LogSinkClient()
 
 class PricingServer(PricingBase, Server):
