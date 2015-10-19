@@ -1,2 +1,2 @@
 #! /usr/bin/env bash
-watch -n 1 python fibpro/monitor.py
+watch -d -n 1 python fibpro/monitor.py

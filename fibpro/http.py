@@ -4,8 +4,9 @@ from util import get_threadlocal
 def generate_request_id():
     return ("r%16x" % random.getrandbits(63)).replace(' ', '0')
 
-def set_request_id(request_id=None):
-    request_id  = request_id or generate_request_id()
+def set_request_id(request_id=None, force_none=False):
+    if not force_none and not request_id:
+        request_id = generate_request_id()
     setattr(get_threadlocal(), "request_id", request_id)
     return request_id 
 
@@ -24,6 +25,11 @@ def http_response(start_response, status="200 OK", body=""):
     if request_id:
         headers.append(("x-request-id", request_id))
     start_response(status, headers)
+    # Unset the request ID for this thread so
+    # requests potentially made from this thread
+    # unrelated to an incoming request are not logged
+    # under the request id of the last incoming request.
+    set_request_id(request_id=None, force_none=True)
     return iter([body_str])
 
 class HTTPBasic(object):
