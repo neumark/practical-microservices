@@ -2,3 +2,4 @@ gunicorn==19.3.0
 raven==5.7.2
 requests==2.8.0
 six==1.10.0
+microcli==0.3.2
