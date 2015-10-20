@@ -45,7 +45,12 @@ class ServerConfig(object):
         self.endpoints = get_default_endpoints()
 
     def _get_current_environment(self):
-        return get_server_meta().get('environment', DEFAULT_ENVIRONMENT)
+        # first, try to get environment from request_meta,
+        # then from server_meta, then use default
+        return get_request_meta().get(
+            'environment',
+            get_server_meta().get('environment',
+                DEFAULT_ENVIRONMENT))
 
     def get_endpoint(self, service, environment=None):
         environment = environment or self._get_current_environment()
@@ -83,10 +88,7 @@ class RPCBase(object):
                 str(args)))
 
     def set_server_name(self, name=None):
-        name = name or "%s_%s" % (
-            get_server_meta()['environment'],
-            self.NAME)
-        return dict_set(get_server_meta(), ["name"], name)
+        return dict_set(get_server_meta(), ["name"], name or self.NAME)
 
     def set_environment(self, environment=None):
         return dict_set(get_server_meta(),
@@ -114,6 +116,7 @@ class RPCBase(object):
     def get_request_meta_dict(self):
         meta_dict = get_request_meta()
         meta_dict['source'] = get_server_meta().get('name', 'unknown')
+        meta_dict['source_environment'] = get_server_meta().get('environment')
         return meta_dict
 
     def encode_arguments(self, method, args):

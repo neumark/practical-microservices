@@ -1,5 +1,6 @@
 from rpc import Client, Server, ServerConfig, get_threadlocal, get_request_meta
 from logging import getLogger
+from const import DEFAULT_ENVIRONMENT
 
 class LogSinkBase(object):
     NAME = "logsink"
@@ -11,9 +12,10 @@ class LogSinkServer(LogSinkBase, Server):
     def recv_log(self, message=None, level='info'):
         if message:
             source = get_request_meta().get('source', 'unknown')
+            source_environment = get_request_meta().get('source_environment', DEFAULT_ENVIRONMENT)
             request_id = get_request_meta().get('request_id') or '-'
             getattr(self.log, level)(
-                "[%s] %s %s" % (source, request_id, message))
+                "[%s_%s] %s %s" % (source_environment, source, request_id, message))
             return True
         return False
 
