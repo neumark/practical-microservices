@@ -1,0 +1,17 @@
+startup_message off
+vbell off
+bell_msg 'Bell in window %n^G'
+defscrollback 30000
+
+bindkey ^f at "#" kill
+
+termcapinfo * ti@:te@
+
+hardstatus alwayslastline '%{= wk}%?%-Lw%?%{r}(%{k}%n*%f%t%?(%u)%?%{r})%{k}%?%+Lw%?%?%= %m/%d %C%A'
+activity ''
+
+screen -t dev_fibfrontend_9101 sh -c "python virtualenv/bin/gunicorn --access-logformat '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(T)s %(D)s %({x-request-id}o)s' --access-logfile - -t 0 -b 127.0.0.1:9101 -w 1 -p etc/dev_fibfrontend.pid 'fibpro.fibfrontend:FibFrontendServer(\"dev\").app()'; exec bash"
+screen -t dev_logsink_9102 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9102 -w 1 -p etc/dev_logsink.pid 'fibpro.logsink:LogSinkServer(\"dev\").app()'; exec bash"
+screen -t dev_userstore_9103 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9103 -w 1 -p etc/dev_userstore.pid 'fibpro.userstore:UserStoreServer(\"dev\").app()'; exec bash"
+screen -t dev_pricing_9104 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9104 -w 1 -p etc/dev_pricing.pid 'fibpro.pricing:PricingServer(\"dev\").app()'; exec bash"
+screen -t dev_compute_worker_9105 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9105 -w 1 -p etc/dev_compute_worker.pid 'fibpro.compute_worker:ComputeWorkerServer(\"dev\").app()'; exec bash"

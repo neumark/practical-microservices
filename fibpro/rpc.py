@@ -10,9 +10,9 @@ import traceback
 from logging import getLogger
 from urlparse import parse_qs
 # fibpro modules
-from const import DEFAULT_SENTRY_DSN
+from const import DEFAULT_SENTRY_DSN, DEFAULT_ENVIRONMENT
 from servicedir import get_default_endpoints
-from http import (http_response, get_request_id)
+from http import http_response, get_request_id
 from util import (urlsafe_base64_encode,
     urlsafe_base64_decode, get_threadlocal,
     dict_set, dict_get)
@@ -20,10 +20,21 @@ from util import (urlsafe_base64_encode,
 log = getLogger('gunicorn.error')
 
 def get_request_meta():
-    return dict_get(get_threadlocal(), ["request_meta"], {})
+    request_meta = dict_get(get_threadlocal(), ["request_meta"], {})
+    # write back dictionary in case it was newly created
+    set_request_meta(request_meta)
+    return request_meta
 
 def set_request_meta(request_meta):
-    dict_set(get_threadlocal(), ["request_meta"], request_meta)
+    return dict_set(get_threadlocal(), ["request_meta"], request_meta)
+
+def get_server_meta():
+    server_meta = dict_get(get_threadlocal(), ["server_meta"], {})
+    set_server_meta(server_meta)
+    return server_meta
+
+def set_server_meta(server_meta):
+    return dict_set(get_threadlocal(), ["server_meta"], server_meta)
 
 class RemoteException(Exception):
     pass
@@ -33,9 +44,13 @@ class ServerConfig(object):
     def __init__(self):
         self.endpoints = get_default_endpoints()
 
-    def get_endpoint(self, service):
+    def _get_environment(self):
+        return get_server_meta().get('environment', DEFAULT_ENVIRONMENT)
+
+    def get_endpoint(self, service, environment=None):
+        environment = environment or self._get_environment()
         is_custom_endpoint = False
-        endpoint = self.endpoints.get(service)
+        endpoint = self.endpoints[environment].get(service)
         custom_endpoint = get_request_meta().get('custom_endpoints', {}).get(service, None)
         if custom_endpoint:
             is_custom_endpoint = True
@@ -54,16 +69,17 @@ class RPCBase(object):
         if self.LOG_RPC:
             log.info("RPC %s %s->%s:%s(**%s)" % (
                 get_request_id() or "-",
-                from_service,
-                to_service,
+                from_service or "unknown",
+                to_service or "unknown",
                 method,
                 str(args)))
 
-    def set_server_name(self):
-        dict_set(get_threadlocal(), ["server_name"], self.NAME)
+    def set_server_name(self, name=None):
+        return dict_set(get_server_meta(), ["name"], name or self.NAME)
 
-    def get_server_name(self):
-        return dict_get(get_threadlocal(), ["server_name"], "unknown")
+    def set_environment(self, environment=None):
+        return dict_set(get_server_meta(),
+            ["environment"], environment or DEFAULT_ENVIRONMENT)
 
     def encode_data(self, data):
         return json.dumps(
@@ -86,7 +102,7 @@ class RPCBase(object):
 
     def get_request_meta_dict(self):
         meta_dict = get_request_meta()
-        meta_dict['source'] = self.get_server_name()
+        meta_dict['source'] = get_server_meta().get('name', 'unknown')
         return meta_dict
 
     def encode_arguments(self, method, args):
@@ -107,8 +123,13 @@ class Server(RPCBase):
     NAME = "unknown"
     SENTRY_DSN =  DEFAULT_SENTRY_DSN
 
-    def __init__(self):
-        self.set_server_name()
+    def __init__(self, environment=DEFAULT_ENVIRONMENT, name=None):
+        self.set_environment(environment)
+        self.set_server_name(name)
+        self.service_init()
+
+    def service_init(self):
+        pass
 
     def wsgi_app(self, environ, start_response):
         query_dict = parse_qs(environ['QUERY_STRING'])
@@ -116,7 +137,7 @@ class Server(RPCBase):
             query_dict[self.REQ_PARAM][0])
         set_request_meta(request_meta)
         self.log_rpc(
-            request_meta.get('source', 'unknown'),
+            get_request_meta().get('source', 'unknown'),
             self.NAME, method, args)
         try:
             result = getattr(self, method)(**args)
@@ -162,7 +183,8 @@ class Client(RPCBase):
         url = self.construct_url(
             method, args, service)
         self.log_rpc(
-            self.get_server_name(), service, method, args)
+            get_server_meta().get("name"),
+            service, method, args)
         return self.return_or_raise(
             self.decode_result(requests.get(url).text))
 

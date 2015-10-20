@@ -2,6 +2,7 @@
 from raven import Client as RavenClient
 from raven.middleware import Sentry
 from const import (DEFAULT_SENTRY_DSN,
+    DEFAULT_ENVIRONMENT,
     ENDPOINT_OVERRIDE_PREFIX)
 from rpc import Server, get_request_meta
 from http import HTTPBasic, http_response, set_new_request_id
@@ -15,8 +16,7 @@ class FibFrontendServer(Server):
 
     NAME = "fibfrontend"
     
-    def __init__(self):
-        self.set_server_name()
+    def service_init(self):
         self.log = LogSinkClient()
         self.userstore_client = UserStoreClient()
         self.pricing_client = PricingClient()
@@ -31,9 +31,8 @@ class FibFrontendServer(Server):
                 environ['PATH_INFO'], str(e)))
             return None, "404 NOT FOUND", str(e)
 
-    def set_custom_endpoints(self, environ):
+    def set_custom_endpoints(self, query_dict):
         # custom enpoint information travels on in request_meta
-        query_dict = parse_qs(environ['QUERY_STRING'])
         custom_endpoints = {}
         for key in query_dict.keys():
             if key.startswith(ENDPOINT_OVERRIDE_PREFIX):
@@ -47,7 +46,8 @@ class FibFrontendServer(Server):
         set_new_request_id()
         # get user object
         user_obj = environ.get('REMOTE_USER')
-        self.set_custom_endpoints(environ)
+        query_dict = parse_qs(environ['QUERY_STRING'])
+        self.set_custom_endpoints(query_dict)
         requested_fib, status, body = self.get_requested_fib(environ)
         if requested_fib is not None:
             # verify and update user credit
