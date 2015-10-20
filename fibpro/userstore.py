@@ -11,7 +11,7 @@ class UserStoreBase(object):
 
 class UserStoreServer(UserStoreBase, Server):
 
-    def service_init(self):
+    def server_init(self):
         self.users = {}
         self.credit = {}
         self.log = LogSinkClient()

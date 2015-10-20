@@ -11,12 +11,13 @@ from pricing import PricingClient
 from logsink import LogSinkClient
 from compute_worker import ComputeWorkerClient
 from urlparse import parse_qs
+from urllib import unquote
 
 class FibFrontendServer(Server):
 
     NAME = "fibfrontend"
     
-    def service_init(self):
+    def server_init(self):
         self.log = LogSinkClient()
         self.userstore_client = UserStoreClient()
         self.pricing_client = PricingClient()

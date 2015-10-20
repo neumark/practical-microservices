@@ -44,20 +44,28 @@ class ServerConfig(object):
     def __init__(self):
         self.endpoints = get_default_endpoints()
 
-    def _get_environment(self):
+    def _get_current_environment(self):
         return get_server_meta().get('environment', DEFAULT_ENVIRONMENT)
 
     def get_endpoint(self, service, environment=None):
-        environment = environment or self._get_environment()
+        environment = environment or self._get_current_environment()
         is_custom_endpoint = False
         endpoint = self.endpoints[environment].get(service)
         custom_endpoint = get_request_meta().get('custom_endpoints', {}).get(service, None)
         if custom_endpoint:
             is_custom_endpoint = True
-            endpoint = custom_endpoint
+            # custom_endpoint could be an environment name
+            # or an endpoint url
+            if custom_endpoint in self.get_environments():
+                endpoint = self.endpoints[custom_endpoint].get(service)
+            else:
+                endpoint = custom_endpoint
         return endpoint, is_custom_endpoint
 
-    def get_services(self):
+    def get_services(self, environment=DEFAULT_ENVIRONMENT):
+        return self.endpoints[environment].keys()
+
+    def get_environments(self):
         return self.endpoints.keys()
 
 class RPCBase(object):
@@ -75,7 +83,10 @@ class RPCBase(object):
                 str(args)))
 
     def set_server_name(self, name=None):
-        return dict_set(get_server_meta(), ["name"], name or self.NAME)
+        name = name or "%s_%s" % (
+            get_server_meta()['environment'],
+            self.NAME)
+        return dict_set(get_server_meta(), ["name"], name)
 
     def set_environment(self, environment=None):
         return dict_set(get_server_meta(),
@@ -126,9 +137,9 @@ class Server(RPCBase):
     def __init__(self, environment=DEFAULT_ENVIRONMENT, name=None):
         self.set_environment(environment)
         self.set_server_name(name)
-        self.service_init()
+        self.server_init()
 
-    def service_init(self):
+    def server_init(self):
         pass
 
     def wsgi_app(self, environ, start_response):
