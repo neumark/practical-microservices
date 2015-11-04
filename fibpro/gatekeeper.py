@@ -7,30 +7,24 @@ from const import (DEFAULT_SENTRY_DSN,
 from rpc import Server, get_request_meta, set_request_meta
 from http import HTTPBasic, http_response, set_new_request_id
 from userstore import UserStoreClient
-from pricing import PricingClient
 from logsink import LogSinkClient
-from compute_worker import ComputeWorkerClient
+from controller import ControllerClient
 from urlparse import parse_qs
 from urllib import unquote
+from util import get_threadlocal, dict_set, dict_get
 
-class FibFrontendServer(Server):
+class GatekeeperServer(Server):
 
-    NAME = "fibfrontend"
+    NAME = "gatekeeper"
     
     def server_init(self):
         self.log = LogSinkClient()
         self.userstore_client = UserStoreClient()
-        self.pricing_client = PricingClient()
-        self.compute_worker_client = ComputeWorkerClient()
+        self.controller_client = ControllerClient()
 
     def get_requested_fib(self, environ):
         # parse integer fibonacci sequence index
-        try:
-            return int(environ['PATH_INFO'][1:]), None, None
-        except ValueError, e:
-            self.log.warn('Request to %s resulted in %s' % (
-                environ['PATH_INFO'], str(e)))
-            return None, "404 NOT FOUND", str(e)
+        return environ['PATH_INFO'][1:]
 
     def set_custom_environment(self, query_dict):
         if "environment" in query_dict:
@@ -56,30 +50,21 @@ class FibFrontendServer(Server):
         return custom_endpoints
 
     def parse_request(self, environ):
-        user_obj = environ.get('REMOTE_USER')
         query_dict = parse_qs(environ['QUERY_STRING'])
         self.set_custom_environment(query_dict)
         self.set_custom_endpoints(query_dict)
-        requested_fib, status, body = self.get_requested_fib(environ)
-        return user_obj.username, requested_fib, status, body 
+        return self.get_requested_fib(environ)
 
     def wsgi_app(self, environ, start_response):
         set_new_request_id()
-        # get user object
-        username, requested_fib, status, body = self.parse_request(environ)
-        if requested_fib is not None:
-            # verify and update user credit
-            credit_ok, pricing_response = self.pricing_client.pay_for_user_request(
-                requested_fib, username)
-            status = "403 FORBIDDEN"
-            body = pricing_response
-            if credit_ok:
-                status = "200 OK"
-                body = self.compute_worker_client.compute_fib(requested_fib)
-            # return requested fibonacci number
-        response = http_response(start_response,
-            status=status,
-            body=body)
+        username = environ.get('REMOTE_USER', None)
+        if username is not None:
+            raw_requested_fib = self.parse_request(environ)
+            status, body = self.controller_client.generate_response(
+                raw_requested_fib, username)
+        else:
+            status, body = ["401 UNAUTHENTICATED", "Please log in"]
+        response = http_response(start_response, status, body)
         # clear request meta
         set_request_meta({})
         return response

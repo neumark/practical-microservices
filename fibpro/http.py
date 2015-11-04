@@ -46,7 +46,7 @@ class HTTPBasic(object):
             user_obj = self.userstore_client.get_user(username)
             if  user_obj is None or user_obj.password != password:
                 return self.bad_auth(environ, start_response)
-            environ['REMOTE_USER'] = user_obj
+            environ['REMOTE_USER'] = user_obj.username
             del environ['HTTP_AUTHORIZATION']
             return self.app(environ, repl_start_response)
         return self.bad_auth(environ, start_response)

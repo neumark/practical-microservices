@@ -1,8 +1,6 @@
 from rpc import Client, Server, DynamicObject
 from const import USER_DB_FILE
 from util import load_config
-# needs to be imported for client constructor
-# to register itself
 from logsink import LogSinkClient
 
 class UserStoreBase(object):
