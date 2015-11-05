@@ -59,9 +59,3 @@ class HTTPBasic(object):
             ('WWW-Authenticate', 'Basic realm="%s"' % self.realm)]
         start_response('401 Unauthorized', headers)
         return [body]
-
-def remove_header(headers, name):
-    for header in headers:
-        if header[0].lower() == name.lower():
-            headers.remove(header)
-            break

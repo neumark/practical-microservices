@@ -1,5 +1,4 @@
 import json
-from const import HOSTNAME
 import base64
 import six
 from threading import local
@@ -29,8 +28,13 @@ def dict_get(dictionary, key_path, default_value=None):
         dictionary = dictionary[key]
     return dictionary.get(key_path[-1], default_value)
 
-
-
+def dict_map_string(dictionary, map_fn):
+    for key, value in dictionary.iteritems():
+        if isinstance(value, six.string_types):
+            dictionary[key] = map_fn(value)
+        if type(value) == dict and value:
+            dict_map_string(value, map_fn)
+    return dictionary
 
 
 def load_config(config_file=None):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from raven import Client as RavenClient
 from raven.middleware import Sentry
-from const import (DEFAULT_SENTRY_DSN,
+from config import (DEFAULT_SENTRY_DSN,
     DEFAULT_ENVIRONMENT,
     ENDPOINT_OVERRIDE_PREFIX)
 from rpc import Server, get_request_meta, set_request_meta
@@ -21,6 +21,7 @@ class GatekeeperServer(Server):
         self.log = LogSinkClient()
         self.userstore_client = UserStoreClient()
         self.controller_client = ControllerClient()
+        self.basic_auth = HTTPBasic(self.wsgi_app_post_auth, self.userstore_client) 
 
     def get_requested_fib(self, environ):
         # parse integer fibonacci sequence index
@@ -55,8 +56,7 @@ class GatekeeperServer(Server):
         self.set_custom_endpoints(query_dict)
         return self.get_requested_fib(environ)
 
-    def wsgi_app(self, environ, start_response):
-        set_new_request_id()
+    def wsgi_app_post_auth(self, environ, start_response):
         username = environ.get('REMOTE_USER', None)
         if username is not None:
             raw_requested_fib = self.parse_request(environ)
@@ -64,14 +64,11 @@ class GatekeeperServer(Server):
                 raw_requested_fib, username)
         else:
             status, body = ["401 UNAUTHENTICATED", "Please log in"]
-        response = http_response(start_response, status, body)
+        return http_response(start_response, status, body)
+
+    def wsgi_app(self, environ, start_response):
+        set_new_request_id()
+        response = self.basic_auth(environ, start_response)
         # clear request meta
         set_request_meta({})
         return response
-
-    def app(self):
-        return Sentry(
-            HTTPBasic(
-                self.wsgi_app,
-                self.userstore_client),
-            RavenClient(DEFAULT_SENTRY_DSN))

@@ -1,0 +1,16 @@
+{
+    "prod": {
+        "logsink": "http://{PROD_HOSTNAME}:{PROD_PORT}/api/logsink/",
+        "userstore": "http://{PROD_HOSTNAME}:{PROD_PORT}/api/userstore/",
+        "pricing": "http://{PROD_HOSTNAME}:{PROD_PORT}/api/pricing/",
+        "compute_worker": "http://{PROD_HOSTNAME}:{PROD_PORT}/api/compute_worker/",
+        "controller": "http://{PROD_HOSTNAME}:{PROD_PORT}/api/controller/"
+    },
+    "dev": {
+        "logsink": "http://{DEV_HOSTNAME}:9102/api/logsink/",
+        "userstore": "http://{DEV_HOSTNAME}:9103/api/userstore/",
+        "pricing": "http://{DEV_HOSTNAME}:9104/api/pricing/",
+        "compute_worker": "http://{DEV_HOSTNAME}:9105/api/compute_worker/",
+        "controller": "http://{DEV_HOSTNAME}:9106/api/controller/"
+    }
+}

@@ -10,8 +10,7 @@ import traceback
 from logging import getLogger
 from urlparse import parse_qs
 # fibpro modules
-from const import DEFAULT_SENTRY_DSN, DEFAULT_ENVIRONMENT
-from servicedir import get_default_endpoints
+from config import DEFAULT_SENTRY_DSN, DEFAULT_ENVIRONMENT
 from http import http_response, get_request_id
 from util import (urlsafe_base64_encode,
     urlsafe_base64_decode, get_threadlocal,
@@ -41,8 +40,11 @@ class RemoteException(Exception):
 
 class ServerConfig(object):
 
-    def __init__(self):
-        self.endpoints = get_default_endpoints()
+    def __init__(self, service_dir_client=None):
+        self.service_dir_client = service_dir_client
+        if self.service_dir_client is None:
+            from servicedir import ServiceDirClient
+            self.service_dir_client = ServiceDirClient()
 
     def _get_current_environment(self):
         # first, try to get environment from request_meta,
@@ -55,7 +57,7 @@ class ServerConfig(object):
     def get_endpoint(self, service, environment=None):
         environment = environment or self._get_current_environment()
         is_custom_endpoint = False
-        endpoint = self.endpoints[environment].get(service)
+        endpoint = self.service_dir_client.get_endpoint(environment, service)
         custom_endpoint = get_request_meta().get('custom_endpoints', {}).get(service, None)
         if custom_endpoint:
             is_custom_endpoint = True
@@ -68,10 +70,10 @@ class ServerConfig(object):
         return endpoint, is_custom_endpoint
 
     def get_services(self, environment=DEFAULT_ENVIRONMENT):
-        return self.endpoints[environment].keys()
+        return self.service_dir_client.get_services(environment)
 
     def get_environments(self):
-        return self.endpoints.keys()
+        return self.service_dir_client.get_environments()
 
 class RPCBase(object):
 

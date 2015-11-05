@@ -1,6 +1,6 @@
 from rpc import Client, Server, ServerConfig, get_threadlocal, get_request_meta
 from logging import getLogger
-from const import DEFAULT_ENVIRONMENT
+from config import DEFAULT_ENVIRONMENT
 
 class LogSinkBase(object):
     NAME = "logsink"
@@ -35,5 +35,3 @@ class LogSinkClient(LogSinkBase, Client):
 
     def error(self, message):
         return self.send_log(message, 'error')
-
-log = LogSinkClient()

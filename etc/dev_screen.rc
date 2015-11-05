@@ -16,3 +16,4 @@ screen -t dev_userstore_9103 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0
 screen -t dev_pricing_9104 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9104 -w 1 -p etc/dev_pricing.pid 'fibpro.pricing:PricingServer(\"dev\").app()'; exec bash"
 screen -t dev_compute_worker_9105 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9105 -w 1 -p etc/dev_compute_worker.pid 'fibpro.compute_worker:ComputeWorkerServer(\"dev\").app()'; exec bash"
 screen -t dev_controller_9106 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:9106 -w 1 -p etc/dev_controller.pid 'fibpro.controller:ControllerServer(\"dev\").app()'; exec bash"
+screen -t dev_servicedir_8888 sh -c "python virtualenv/bin/gunicorn -t 0 -b 127.0.0.1:8888 -w 1 -p etc/dev_servicedir.pid 'fibpro.servicedir:ServiceDirServer(\"dev\").app()'; exec bash"
