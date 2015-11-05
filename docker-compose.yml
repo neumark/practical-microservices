@@ -1,0 +1,62 @@
+gatekeeper:
+  build: .
+  environment:
+    PORT: 9001
+    MAIN: fibpro.gatekeeper:GatekeeperServer().app()
+  command: ./bin/run_service.sh --access-logformat '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(T)s %(D)s %({x-request-id}o)s' --access-logfile -
+  net: "container:haproxy"
+
+logsink:
+  build: .
+  environment:
+    PORT: 9002
+    MAIN: fibpro.logsink:LogSinkServer().app()
+  command: ./bin/run_service.sh
+  net: "container:haproxy"
+
+userstore:
+  build: .
+  environment:
+    PORT: 9003
+    MAIN: fibpro.userstore:UserStoreServer().app()
+  command: ./bin/run_service.sh
+  net: "container:haproxy"
+
+pricing:
+  build: .
+  environment:
+    PORT: 9004
+    MAIN: fibpro.pricing:PricingServer().app()
+  command: ./bin/run_service.sh
+  net: "container:haproxy"
+
+compute_worker:
+  build: .
+  environment:
+    PORT: 9005
+    MAIN: fibpro.compute_worker:ComputeWorkerServer().app()
+  command: ./bin/run_service.sh
+  net: "container:haproxy"
+
+controller:
+  build: .
+  environment:
+    PORT: 9006
+    MAIN: fibpro.controller:ControllerServer().app()
+  command: ./bin/run_service.sh
+  net: "container:haproxy"
+
+servicedir:
+  build: .
+  environment:
+    PORT: 8888
+    MAIN: fibpro.servicedir:ServiceDirServer().app()
+  command: ./bin/run_service.sh
+  net: "container:haproxy"
+
+haproxy:
+  image: haproxy
+  ports:
+    - 9000:9000
+  volumes:
+    - ./etc/haproxy.conf:/usr/local/etc/haproxy/haproxy.cfg:ro
