@@ -1,4 +1,4 @@
-from rpc import Client, Server, ServerConfig, get_threadlocal, get_request_meta
+from rpc import Client, Server, get_threadlocal, get_request_meta
 from math import log as logarithm, floor
 from userstore import UserStoreClient
 from logsink import LogSinkClient

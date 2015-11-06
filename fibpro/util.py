@@ -1,6 +1,7 @@
 import json
 import base64
 import six
+import sys
 from threading import local
 
 _threadlocal = None
@@ -9,6 +10,7 @@ def get_threadlocal():
     global _threadlocal
     if not _threadlocal:
         _threadlocal = local()
+    if not hasattr(_threadlocal, 'data'):
         setattr(_threadlocal, 'data', {})
     return getattr(_threadlocal, 'data')
 
@@ -49,6 +51,13 @@ def load_config(config_file=None):
         with open(filename, "r") as f:
             config.update(json.loads(f.read()))
     return config
+
+def get_server_port():
+    for i in xrange(len(sys.argv)):
+        if sys.argv[i] == "-b":
+            return sys.argv[i+1].split(':')[1]
+    return None
+
 
 # Copied from django source: https://docs.djangoproject.com/en/1.8/_modules/django/utils/http/#urlsafe_base64_encode
 def urlsafe_base64_encode(s):

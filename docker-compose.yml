@@ -1,5 +1,7 @@
 gatekeeper:
   build: .
+  volumes_from:
+    - servicedir
   environment:
     PORT: 9001
     MAIN: fibpro.gatekeeper:GatekeeperServer().app()
@@ -8,6 +10,8 @@ gatekeeper:
 
 logsink:
   build: .
+  volumes_from:
+    - servicedir
   environment:
     PORT: 9002
     MAIN: fibpro.logsink:LogSinkServer().app()
@@ -16,6 +20,9 @@ logsink:
 
 userstore:
   build: .
+  volumes_from:
+    - servicedir
+    - logsink
   environment:
     PORT: 9003
     MAIN: fibpro.userstore:UserStoreServer().app()
@@ -24,6 +31,8 @@ userstore:
 
 pricing:
   build: .
+  volumes_from:
+    - servicedir
   environment:
     PORT: 9004
     MAIN: fibpro.pricing:PricingServer().app()
@@ -32,6 +41,8 @@ pricing:
 
 compute_worker:
   build: .
+  volumes_from:
+    - servicedir
   environment:
     PORT: 9005
     MAIN: fibpro.compute_worker:ComputeWorkerServer().app()
@@ -40,6 +51,8 @@ compute_worker:
 
 controller:
   build: .
+  volumes_from:
+    - servicedir
   environment:
     PORT: 9006
     MAIN: fibpro.controller:ControllerServer().app()

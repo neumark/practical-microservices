@@ -1,4 +1,4 @@
-from rpc import Client, Server, ServerConfig, get_threadlocal, get_request_meta
+from rpc import Client, Server, get_threadlocal, get_request_meta
 from logging import getLogger
 from config import DEFAULT_ENVIRONMENT
 
