@@ -51,6 +51,7 @@ class ServiceDirClient(ServiceDirBase, Client):
             service_dir_endpoint=None):
         self.service_dir_endpoint = service_dir_endpoint or DEFAULT_SERVICE_DIR_ENDPOINT
         self.service_dir_client = self
+        self.service_endpoints = {}
         self._init_timer()
 
     def _init_timer(self):
@@ -58,14 +59,20 @@ class ServiceDirClient(ServiceDirBase, Client):
             # set server meta for this thread
             set_server_meta(server_meta)
             while True:
-                s = str(self.get_all_endpoints())
-                self.log.info("got endpoints %s" % s)
+                self.service_endpoints = self.get_all_endpoints()
+                self.log.info("got endpoints")
                 sleep(SERVICE_UPDATE_INTERVAL)
         spawn(poll_endpoints, get_server_meta())
 
     def get_endpoint(self, environment, service):
         if service == "servicedir":
             return self.service_dir_endpoint
+        if self.service_endpoints and \
+                service in self.service_endpoints.get(environment, {}):
+            endpoint = self.service_endpoints[environment][service]
+            if endpoint is not None:
+                return endpoint
+        # fall back to making RPC request
         return self.call('get_endpoint', {
             'environment': environment,
             'service': service})

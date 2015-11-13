@@ -3,6 +3,7 @@ import base64
 import six
 import sys
 from threading import local
+from time import sleep
 
 _threadlocal = None
 
@@ -58,6 +59,25 @@ def get_server_port():
             return sys.argv[i+1].split(':')[1]
     return None
 
+class RetryException(Exception):
+    pass
+
+def _retry_default_post_attempt(e):
+    sleep(1)
+    return False
+
+def retry(
+        try_function,
+        retries=10,
+        post_attempt=_retry_default_post_attempt):
+    for i in xrange(0, retries):
+        try:
+            return try_function()
+        except Exception, e:
+            give_up = post_attempt(e)
+            if give_up == True:
+                break
+    raise RetryException(i)
 
 # Copied from django source: https://docs.djangoproject.com/en/1.8/_modules/django/utils/http/#urlsafe_base64_encode
 def urlsafe_base64_encode(s):

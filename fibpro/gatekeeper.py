@@ -67,6 +67,8 @@ class GatekeeperServer(Server):
         return http_response(start_response, status, body)
 
     def wsgi_app(self, environ, start_response):
+        self.set_environment(self.environment)
+        self.set_server_name(self.name)
         set_new_request_id()
         response = self.basic_auth(environ, start_response)
         # clear request meta

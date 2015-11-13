@@ -14,7 +14,9 @@ from config import DEFAULT_SENTRY_DSN, DEFAULT_ENVIRONMENT
 from http import http_response, get_request_id
 from util import (urlsafe_base64_encode,
     urlsafe_base64_decode, get_threadlocal,
-    dict_set, dict_get, get_server_port)
+    dict_set, dict_get, get_server_port, retry)
+from gevent import getcurrent
+from time import sleep
 
 log = getLogger('gunicorn.error')
 
@@ -36,6 +38,9 @@ def set_server_meta(server_meta):
     return dict_set(get_threadlocal(), ["server_meta"], server_meta)
 
 class RemoteException(Exception):
+    pass
+
+class NoServiceEndpointFound(Exception):
     pass
 
 class RPCBase(object):
@@ -110,8 +115,10 @@ class Server(RPCBase):
     SENTRY_DSN =  DEFAULT_SENTRY_DSN
 
     def __init__(self, environment=DEFAULT_ENVIRONMENT, name=None):
-        self.set_environment(environment)
-        self.set_server_name(name)
+        self.environment = environment
+        self.name = self.NAME or name
+        self.set_environment(self.environment)
+        self.set_server_name(self.name)
         self.server_init()
         self.register_server()
 
@@ -132,6 +139,9 @@ class Server(RPCBase):
             endpoint_parts)
 
     def wsgi_app(self, environ, start_response):
+        self.set_environment(self.environment)
+        self.set_server_name(self.name)
+
         method, args, request_meta = self.decode_arguments(environ)
         set_request_meta(request_meta)
         self.log_rpc(
@@ -164,6 +174,8 @@ class Client(RPCBase):
 
     def _get_endpoint(self, service):
         endpoint, is_custom = self.service_dir_client.get_effective_endpoint(service)
+        if endpoint is None:
+            raise NoServiceEndpointFound(service)
         if is_custom and self.LOG_RPC:
             log.info("Using custom %s endpoint %s" % (service, endpoint))
         return endpoint
@@ -179,11 +191,17 @@ class Client(RPCBase):
             return response['result']
         raise RemoteException(response['traceback'])
 
+    
     def call(self, method, args=None, service=None):
         args = args or {}
         service = service or self.NAME
-        url = self.construct_url(
-            method, args, service)
+        def no_service_endpoint(e):
+            log.info("Thread id: %s retry exception calling %s %s" % (
+                getcurrent(), service, str(e)))
+            sleep(60)
+        url = retry(
+            lambda: self.construct_url(method, args, service),
+            post_attempt=no_service_endpoint)
         self.log_rpc(
             get_server_meta().get("name"),
             service, method, args)
