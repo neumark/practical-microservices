@@ -10,7 +10,8 @@ import traceback
 from logging import getLogger
 from urlparse import parse_qs
 # fibpro modules
-from config import DEFAULT_SENTRY_DSN, DEFAULT_ENVIRONMENT
+from config import (DEFAULT_SENTRY_DSN, DEFAULT_ENVIRONMENT,
+    WAIT_FOR_SERVICE_ENDPOINT_TIMEOUT)
 from http import http_response, get_request_id
 from util import (urlsafe_base64_encode,
     urlsafe_base64_decode, get_threadlocal,
@@ -175,7 +176,7 @@ class Client(RPCBase):
     def _get_endpoint(self, service):
         endpoint, is_custom = self.service_dir_client.get_effective_endpoint(service)
         if endpoint is None:
-            raise NoServiceEndpointFound(service)
+            raise NoServiceEndpointFound('No endpoint found for %s' % service)
         if is_custom and self.LOG_RPC:
             log.info("Using custom %s endpoint %s" % (service, endpoint))
         return endpoint
@@ -196,12 +197,12 @@ class Client(RPCBase):
         args = args or {}
         service = service or self.NAME
         def no_service_endpoint(e):
-            log.info("Thread id: %s retry exception calling %s %s" % (
-                getcurrent(), service, str(e)))
-            sleep(60)
+            log.info("No endpoint found for %s, retrying" % service)
+            sleep(WAIT_FOR_SERVICE_ENDPOINT_TIMEOUT)
         url = retry(
             lambda: self.construct_url(method, args, service),
-            post_attempt=no_service_endpoint)
+            post_attempt=no_service_endpoint,
+            raise_last_exception=True)
         self.log_rpc(
             get_server_meta().get("name"),
             service, method, args)

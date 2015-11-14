@@ -59,8 +59,11 @@ class ServiceDirClient(ServiceDirBase, Client):
             # set server meta for this thread
             set_server_meta(server_meta)
             while True:
-                self.service_endpoints = self.get_all_endpoints()
-                self.log.info("got endpoints")
+                self.service_endpoints = self.get_all_endpoints(
+                    dict_get(
+                        get_server_meta(),
+                        ["environment"],
+                        DEFAULT_ENVIRONMENT))
                 sleep(SERVICE_UPDATE_INTERVAL)
         spawn(poll_endpoints, get_server_meta())
 
@@ -73,6 +76,7 @@ class ServiceDirClient(ServiceDirBase, Client):
             if endpoint is not None:
                 return endpoint
         # fall back to making RPC request
+        self.log.info("No cached endpoint for %s; polling servicedir" % service)
         return self.call('get_endpoint', {
             'environment': environment,
             'service': service})

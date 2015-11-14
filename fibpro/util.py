@@ -60,7 +60,9 @@ def get_server_port():
     return None
 
 class RetryException(Exception):
-    pass
+    def __init__(self, exception, *args):
+        self.exception = exception
+        super(RetryException, self).__init__(*args)
 
 def _retry_default_post_attempt(e):
     sleep(1)
@@ -68,16 +70,20 @@ def _retry_default_post_attempt(e):
 
 def retry(
         try_function,
-        retries=10,
-        post_attempt=_retry_default_post_attempt):
+        retries=3,
+        post_attempt=_retry_default_post_attempt,
+        raise_last_exception=False):
+    last_exception = None
     for i in xrange(0, retries):
         try:
             return try_function()
-        except Exception, e:
-            give_up = post_attempt(e)
+        except Exception, last_exception:
+            give_up = post_attempt(last_exception)
             if give_up == True:
                 break
-    raise RetryException(i)
+    if raise_last_exception and last_exception is not None:
+        raise last_exception
+    raise RetryException(last_exception)
 
 # Copied from django source: https://docs.djangoproject.com/en/1.8/_modules/django/utils/http/#urlsafe_base64_encode
 def urlsafe_base64_encode(s):

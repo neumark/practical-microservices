@@ -7,5 +7,6 @@
     "DEV_HOSTNAME": "127.0.0.1",
     "ENDPOINT_OVERRIDE_PREFIX": "endpoint_",
     "DEFAULT_ENVIRONMENT": "prod",
-    "DEFAULT_SERVICE_DIR_ENDPOINT": "http://localhost:8888/api/servicedir"
+    "DEFAULT_SERVICE_DIR_ENDPOINT": "http://localhost:8888/api/servicedir",
+    "WAIT_FOR_SERVICE_ENDPOINT_TIMEOUT": 30
 }
