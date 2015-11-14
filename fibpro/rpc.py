@@ -110,16 +110,27 @@ class RPCBase(object):
         request_meta['environ'] = environ
         return data['method'], data['args'], request_meta
 
+    def set_service_dir_client(self, service_dir_client=None, service_dir_endpoint=None):
+        if service_dir_client is not None:
+            self.service_dir_client = service_dir_client
+        else:
+            from servicedir import ServiceDirClient
+            self.service_dir_client = ServiceDirClient(service_dir_endpoint)
+
 class Server(RPCBase):
 
     NAME = "unknown"
     SENTRY_DSN =  DEFAULT_SENTRY_DSN
 
-    def __init__(self, environment=DEFAULT_ENVIRONMENT, name=None):
+    def __init__(self,
+            environment=DEFAULT_ENVIRONMENT,
+            name=None,
+            service_dir_client=None):
         self.environment = environment
         self.name = self.NAME or name
         self.set_environment(self.environment)
         self.set_server_name(self.name)
+        self.set_service_dir_client(service_dir_client)
         self.server_init()
         self.register_server()
 
@@ -169,9 +180,8 @@ class Client(RPCBase):
 
     NAME = "unknown"
 
-    def __init__(self, service_dir_endpoint=None):
-        from servicedir import ServiceDirClient
-        self.service_dir_client = ServiceDirClient(service_dir_endpoint)
+    def __init__(self, service_dir_client=None, service_dir_endpoint=None):
+        self.set_service_dir_client(service_dir_client, service_dir_endpoint)
 
     def _get_endpoint(self, service):
         endpoint, is_custom = self.service_dir_client.get_effective_endpoint(service)

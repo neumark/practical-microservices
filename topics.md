@@ -19,9 +19,12 @@
         * Unit testing code full of RPC calls difficult
         * Environment difficult to set up for acceptanct tests / functional tests
         * Complexity of running local, prod, test environments (possibly more)
-    3. dealing with network APIs
+    3. data consistency and types
         * I like untyped languages, whats up w types in swagger, thrift, protobuf?
         * I like typed languages, but compiler cant help detect broken / incompatible network interfaces
+        * DB transactions are nontrivial to implement generically in RPC, easier to write specialized functions
+        * Multiple favorite encoding options (thrift, json, protobuf, msgpack, xml, ...) how to choose?
+    4. dealing with the network
         * Cant trust other services to behave sanely (eg: must do ratelimiting).
         * Service discovery is a new problem (this was a non-issue for monolithical code)
         * Network issues (and problems from trying to mask them) require new solutions (eg: circuit breaking).
