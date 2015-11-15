@@ -144,8 +144,7 @@ class Server(RPCBase):
             'port': get_server_port(),
             'path': "api/%s" % self.NAME,
         }
-        from fibpro.servicedir import ServiceDirClient
-        ServiceDirClient().set_endpoint(
+        self.service_dir_client.set_endpoint(
             environment,
             service_name,
             endpoint_parts)

@@ -18,9 +18,9 @@ class GatekeeperServer(Server):
     NAME = "gatekeeper"
     
     def server_init(self):
-        self.log = LogSinkClient()
-        self.userstore_client = UserStoreClient()
-        self.controller_client = ControllerClient()
+        self.log = LogSinkClient(self.service_dir_client)
+        self.userstore_client = UserStoreClient(self.service_dir_client)
+        self.controller_client = ControllerClient(self.service_dir_client)
         self.basic_auth = HTTPBasic(self.wsgi_app_post_auth, self.userstore_client) 
 
     def get_requested_fib(self, environ):

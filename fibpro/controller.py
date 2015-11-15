@@ -10,9 +10,9 @@ class ControllerBase(object):
 class ControllerServer(ControllerBase, Server):
 
     def server_init(self):
-        self.log = LogSinkClient()
-        self.pricing_client = PricingClient()
-        self.compute_worker_client = ComputeWorkerClient()
+        self.log = LogSinkClient(self.service_dir_client)
+        self.pricing_client = PricingClient(self.service_dir_client)
+        self.compute_worker_client = ComputeWorkerClient(self.service_dir_client)
 
     def parse_requested_fib(self, raw_requested_fib):
         try:

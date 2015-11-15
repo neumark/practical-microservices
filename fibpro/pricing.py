@@ -6,11 +6,12 @@ from logsink import LogSinkClient
 class PricingBase(object):
     NAME = "pricing"
     LOG_RPC = True
-    log = LogSinkClient()
 
 class PricingServer(PricingBase, Server):
 
-    userstore_client = UserStoreClient()
+    def server_init(self):
+        self.log = LogSinkClient(self.service_dir_client)
+        self.userstore_client = UserStoreClient(self.service_dir_client)
 
     def price_request(self, requested_fib):
         return int(floor(logarithm(requested_fib,10))) + 1
