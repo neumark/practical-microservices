@@ -1,17 +1,17 @@
 #!/usr/bin/env python
-from raven import Client as RavenClient
-from raven.middleware import Sentry
-from config import (DEFAULT_SENTRY_DSN,
-    DEFAULT_ENVIRONMENT,
-    ENDPOINT_OVERRIDE_PREFIX)
-from rpc import Server, get_request_meta, set_request_meta
-from http import HTTPBasic, http_response, set_new_request_id
-from userstore import UserStoreClient
-from logsink import LogSinkClient
-from controller import ControllerClient
 from urlparse import parse_qs
 from urllib import unquote
-from util import get_threadlocal, dict_set, dict_get
+from raven import Client as RavenClient
+from raven.middleware import Sentry
+from .config import (DEFAULT_SENTRY_DSN,
+    DEFAULT_ENVIRONMENT,
+    ENDPOINT_OVERRIDE_PREFIX)
+from fibpro.rpc import Server, get_request_meta, set_request_meta
+from fibpro.http_util import HTTPBasic, http_response, set_new_request_id
+from fibpro.userstore import UserStoreClient
+from fibpro.logsink import LogSinkClient
+from fibpro.controller import ControllerClient
+from fibpro.util import get_threadlocal, dict_set, dict_get
 
 class GatekeeperServer(Server):
 

@@ -9,15 +9,14 @@ import sys
 import traceback
 from logging import getLogger
 from urlparse import parse_qs
-# fibpro modules
-from config import (DEFAULT_SENTRY_DSN, DEFAULT_ENVIRONMENT,
-    WAIT_FOR_SERVICE_ENDPOINT_TIMEOUT)
-from http import http_response, get_request_id
-from util import (urlsafe_base64_encode,
-    urlsafe_base64_decode, get_threadlocal,
-    dict_set, dict_get, get_server_port, retry)
 from gevent import getcurrent
 from time import sleep
+from fibpro.config import (DEFAULT_SENTRY_DSN, DEFAULT_ENVIRONMENT,
+    WAIT_FOR_SERVICE_ENDPOINT_TIMEOUT)
+from fibpro.http_util import http_response, get_request_id
+from fibpro.util import (urlsafe_base64_encode,
+    urlsafe_base64_decode, get_threadlocal,
+    dict_set, dict_get, get_server_port, retry)
 
 log = getLogger('gunicorn.error')
 
@@ -99,8 +98,7 @@ class RPCBase(object):
                     {
                         'request_meta': self.get_request_meta_dict(),
                         'method': method,
-                        'args': args
-                        }))
+                        'args': args}))
 
     def decode_arguments(self, environ):
         query_dict = parse_qs(environ['QUERY_STRING'])
@@ -125,14 +123,16 @@ class Server(RPCBase):
     def __init__(self,
             environment=DEFAULT_ENVIRONMENT,
             name=None,
-            service_dir_client=None):
+            service_dir_client=None,
+            register=True):
         self.environment = environment
         self.name = self.NAME or name
         self.set_environment(self.environment)
         self.set_server_name(self.name)
         self.set_service_dir_client(service_dir_client)
         self.server_init()
-        self.register_server()
+        if register:
+            self.register_server()
 
     def server_init(self):
         pass
@@ -169,8 +169,8 @@ class Server(RPCBase):
         return response
 
     def app(self):
-        return Sentry(self.wsgi_app,
-            RavenClient(self.SENTRY_DSN))
+        return self.wsgi_app
+        #return Sentry(self.wsgi_app, RavenClient(self.SENTRY_DSN))
 
     def ping(self):
         return "pong"
@@ -196,6 +196,9 @@ class Client(RPCBase):
             self.REQ_PARAM,
             self.encode_arguments(method, args))
 
+    def make_request(self, url):
+        return requests.get(url).text
+
     def return_or_raise(self, response):
         if 'result' in response:
             return response['result']
@@ -216,7 +219,7 @@ class Client(RPCBase):
             get_server_meta().get("name"),
             service, method, args)
         return self.return_or_raise(
-            self.decode_result(requests.get(url).text))
+            self.decode_result(self.make_request(url)))
 
     def ping(self):
         return self.call('ping')

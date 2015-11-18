@@ -1,5 +1,5 @@
 import random
-from util import get_threadlocal, dict_set, dict_get
+from fibpro.util import get_threadlocal, dict_set, dict_get
 
 def generate_request_id():
     return ("r%16x" % random.getrandbits(63)).replace(' ', '0')

@@ -1,7 +1,7 @@
-from rpc import Client, Server, DynamicObject
-from config import USER_DB_FILE
-from util import load_config
-from logsink import LogSinkClient
+from fibpro.rpc import Client, Server, DynamicObject
+from fibpro.config import USER_DB_FILE
+from fibpro.util import load_config
+from fibpro.logsink import LogSinkClient
 
 class UserStoreBase(object):
     NAME = "userstore"

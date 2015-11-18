@@ -1,4 +1,4 @@
-from rpc import Client, Server
+from fibpro.rpc import Client, Server
 
 class ComputeWorkerBase(object):
     NAME = "compute_worker"

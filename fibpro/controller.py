@@ -1,7 +1,7 @@
-from rpc import Client, Server
-from logsink import LogSinkClient
-from pricing import PricingClient
-from compute_worker import ComputeWorkerClient
+from fibpro.rpc import Client, Server
+from fibpro.logsink import LogSinkClient
+from fibpro.pricing import PricingClient
+from fibpro.compute_worker import ComputeWorkerClient
 
 class ControllerBase(object):
     NAME = "controller"

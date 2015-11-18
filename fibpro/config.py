@@ -1,4 +1,4 @@
-from util import load_config, dict_map_string
+from fibpro.util import load_config, dict_map_string
 import os
 import sys
 

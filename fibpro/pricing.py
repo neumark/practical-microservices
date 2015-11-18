@@ -1,7 +1,7 @@
-from rpc import Client, Server, get_threadlocal, get_request_meta
 from math import log as logarithm, floor
-from userstore import UserStoreClient
-from logsink import LogSinkClient
+from fibpro.rpc import Client, Server, get_threadlocal, get_request_meta
+from fibpro.userstore import UserStoreClient
+from fibpro.logsink import LogSinkClient
 
 class PricingBase(object):
     NAME = "pricing"

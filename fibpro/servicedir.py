@@ -1,9 +1,9 @@
-from config import (PROD_HOSTNAME, PROD_PORT, DEV_HOSTNAME, SERVICE_UPDATE_INTERVAL,
-    DEFAULT_SERVICE_DIR_ENDPOINT, DEFAULT_ENVIRONMENT)
-from rpc import Client, Server, get_request_meta, get_server_meta, set_server_meta
-from util import load_config, dict_map_string, dict_set, dict_get
 from logging import getLogger
 from gevent import spawn, sleep
+from fibpro.config import (PROD_HOSTNAME, PROD_PORT, DEV_HOSTNAME, SERVICE_UPDATE_INTERVAL,
+    DEFAULT_SERVICE_DIR_ENDPOINT, DEFAULT_ENVIRONMENT)
+from fibpro.rpc import Client, Server, get_request_meta, get_server_meta, set_server_meta
+from fibpro.util import load_config, dict_map_string, dict_set, dict_get
 
 class ServiceDirBase(object):
     NAME = "servicedir"
