@@ -126,7 +126,7 @@ class Server(RPCBase):
             service_dir_client=None,
             register=True):
         self.environment = environment
-        self.name = self.NAME or name
+        self.name = name or self.NAME
         self.set_environment(self.environment)
         self.set_server_name(self.name)
         self.set_service_dir_client(service_dir_client)
@@ -179,7 +179,8 @@ class Client(RPCBase):
 
     NAME = "unknown"
 
-    def __init__(self, service_dir_client=None, service_dir_endpoint=None):
+    def __init__(self, service_dir_client=None, service_dir_endpoint=None, name=None):
+        self.name = name or self.NAME 
         self.set_service_dir_client(service_dir_client, service_dir_endpoint)
 
     def _get_endpoint(self, service):
@@ -207,7 +208,7 @@ class Client(RPCBase):
     
     def call(self, method, args=None, service=None):
         args = args or {}
-        service = service or self.NAME
+        service = service or self.name
         def no_service_endpoint(e):
             log.info("No endpoint found for %s, retrying" % service)
             sleep(WAIT_FOR_SERVICE_ENDPOINT_TIMEOUT)
@@ -224,6 +225,16 @@ class Client(RPCBase):
     def ping(self):
         return self.call('ping')
 
-class DynamicObject:
+class GenericClient(Client):
+    def __getattr__(self, rpc_method):
+        def rpc_stub(*args, **kwargs):
+            if args:
+                raise Exception("RPC methods only accept keyword arguments")
+            return self.call(rpc_method, kwargs)
+        return rpc_stub
+
+class DynamicObject(object):
     def __init__(self, **fields):
         self.__dict__.update(fields)
+
+

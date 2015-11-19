@@ -6,11 +6,10 @@ from raven.middleware import Sentry
 from .config import (DEFAULT_SENTRY_DSN,
     DEFAULT_ENVIRONMENT,
     ENDPOINT_OVERRIDE_PREFIX)
-from fibpro.rpc import Server, get_request_meta, set_request_meta
+from fibpro.rpc import Server, GenericClient, get_request_meta, set_request_meta
 from fibpro.http_util import HTTPBasic, http_response, set_new_request_id
 from fibpro.userstore import UserStoreClient
 from fibpro.logsink import LogSinkClient
-from fibpro.controller import ControllerClient
 from fibpro.util import get_threadlocal, dict_set, dict_get
 
 class GatekeeperServer(Server):
@@ -20,7 +19,7 @@ class GatekeeperServer(Server):
     def server_init(self):
         self.log = LogSinkClient(self.service_dir_client)
         self.userstore_client = UserStoreClient(self.service_dir_client)
-        self.controller_client = ControllerClient(self.service_dir_client)
+        self.controller_client = GenericClient(self.service_dir_client, name="controller")
         self.basic_auth = HTTPBasic(self.wsgi_app_post_auth, self.userstore_client) 
 
     def get_requested_fib(self, environ):
@@ -61,7 +60,8 @@ class GatekeeperServer(Server):
         if username is not None:
             raw_requested_fib = self.parse_request(environ)
             status, body = self.controller_client.generate_response(
-                raw_requested_fib, username)
+                raw_requested_fib=raw_requested_fib,
+                username=username)
         else:
             status, body = ["401 UNAUTHENTICATED", "Please log in"]
         return http_response(start_response, status, body)

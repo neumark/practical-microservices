@@ -49,6 +49,7 @@ class ServiceDirClient(ServiceDirBase, Client):
     def __init__(
             self,
             service_dir_endpoint=None):
+        self.name = self.NAME
         self.service_dir_endpoint = service_dir_endpoint or DEFAULT_SERVICE_DIR_ENDPOINT
         self.service_dir_client = self
         self.service_endpoints = {}
