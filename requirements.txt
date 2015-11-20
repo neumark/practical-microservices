@@ -4,3 +4,5 @@ requests==2.8.0
 six==1.10.0
 microcli==0.3.2
 gevent==1.0.2
+wsgi-intercept==0.10.3
+wsgi-proxy==0.3.1

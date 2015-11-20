@@ -4,6 +4,7 @@ import six
 import sys
 from threading import local
 from time import sleep
+from binascii import Error as BinasciiError
 
 _threadlocal = None
 

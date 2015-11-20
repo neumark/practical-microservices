@@ -58,7 +58,7 @@ class RPCBase(object):
                 str(args)))
 
     def set_server_name(self, name=None):
-        return dict_set(get_server_meta(), ["name"], name or self.NAME)
+        return dict_set(get_server_meta(), ["name"], name or self.name)
 
     def get_server_name(self):
         return dict_get(get_server_meta(), ["name"])
@@ -139,15 +139,15 @@ class Server(RPCBase):
 
     def register_server(self):
         environment = dict_get(get_server_meta(), ["environment"])
-        service_name = dict_get(get_server_meta(), ["name"])
+        service = dict_get(get_server_meta(), ["name"])
         endpoint_parts = {
             'port': get_server_port(),
-            'path': "api/%s" % self.NAME,
+            'path': "api/%s" % self.name,
         }
         self.service_dir_client.set_endpoint(
-            environment,
-            service_name,
-            endpoint_parts)
+            environment=environment,
+            service=service,
+            endpoint_parts=endpoint_parts)
 
     def wsgi_app(self, environ, start_response):
         self.set_environment(self.environment)
@@ -157,7 +157,7 @@ class Server(RPCBase):
         set_request_meta(request_meta)
         self.log_rpc(
             get_request_meta().get('source', 'unknown'),
-            self.NAME, method, args)
+            self.name, method, args)
         try:
             result = getattr(self, method)(**args)
             body = self.encode_result(result)
@@ -184,7 +184,7 @@ class Client(RPCBase):
         self.set_service_dir_client(service_dir_client, service_dir_endpoint)
 
     def _get_endpoint(self, service):
-        endpoint, is_custom = self.service_dir_client.get_effective_endpoint(service)
+        endpoint, is_custom = self.service_dir_client.get_effective_endpoint(service=service)
         if endpoint is None:
             raise NoServiceEndpointFound('No endpoint found for %s' % service)
         if is_custom and self.LOG_RPC:

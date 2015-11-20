@@ -12,13 +12,15 @@ def set_new_request_id():
 def get_request_id():
     return dict_get(get_threadlocal(), ["request_meta", "request_id"], None)
 
-def http_response(start_response, status="200 OK", body=""):
+def http_response(start_response, status="200 OK", body="", extra_headers=None):
     body_str = str(body)
     headers = [
         ("Content-Type", "text/plain"),
         ("Content-Length", 
             str(len(body_str)))
     ]
+    if extra_headers:
+        headers.extend(extra_headers)
     # add request id for gunicorn access log
     request_id = get_request_id()
     if request_id:

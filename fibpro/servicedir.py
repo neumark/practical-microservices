@@ -2,7 +2,7 @@ from logging import getLogger
 from gevent import spawn, sleep
 from fibpro.config import (PROD_HOSTNAME, PROD_PORT, DEV_HOSTNAME, SERVICE_UPDATE_INTERVAL,
     DEFAULT_SERVICE_DIR_ENDPOINT, DEFAULT_ENVIRONMENT)
-from fibpro.rpc import Client, Server, get_request_meta, get_server_meta, set_server_meta
+from fibpro.rpc import GenericClient, Server, get_request_meta, get_server_meta, set_server_meta
 from fibpro.util import load_config, dict_map_string, dict_set, dict_get
 
 class ServiceDirBase(object):
@@ -33,10 +33,16 @@ class ServiceDirServer(ServiceDirBase, Server):
             return self.service_endpoints
         return dict_get(self.service_endpoints, [environment], {})
 
+    def set_all_endpoints(self, endpoints=None, environment=None):
+        if environment is None:
+            self.service_endpoints = endpoints
+        else:
+            dict_set(self.service_endpoints, [environment], endpoints)
+
     def set_endpoint(self, environment=DEFAULT_ENVIRONMENT, service=None, endpoint_parts=None):
         endpoint = "{scheme}://{host}:{port}/{path}".format(
             scheme=endpoint_parts.get('scheme', 'http'),
-            host=get_request_meta().get('environ')['REMOTE_ADDR'],
+            host=endpoint_parts.get('host', get_request_meta().get('environ')['REMOTE_ADDR']),
             port=endpoint_parts['port'],
             path=endpoint_parts['path'])
         self.log.info("Registering endpoint %s:%s = %s" % (
@@ -44,7 +50,7 @@ class ServiceDirServer(ServiceDirBase, Server):
         dict_set(self.service_endpoints, [environment, service], endpoint)
         return endpoint
 
-class ServiceDirClient(ServiceDirBase, Client):
+class ServiceDirClient(ServiceDirBase, GenericClient):
 
     def __init__(
             self,
@@ -61,7 +67,7 @@ class ServiceDirClient(ServiceDirBase, Client):
             set_server_meta(server_meta)
             while True:
                 self.service_endpoints = self.get_all_endpoints(
-                    dict_get(
+                    environment=dict_get(
                         get_server_meta(),
                         ["environment"],
                         DEFAULT_ENVIRONMENT))
@@ -81,23 +87,6 @@ class ServiceDirClient(ServiceDirBase, Client):
         return self.call('get_endpoint', {
             'environment': environment,
             'service': service})
-
-    def set_endpoint(self, environment, service, endpoint_parts):
-        return self.call('set_endpoint', {
-            'environment': environment,
-            'service': service,
-            'endpoint_parts': endpoint_parts})
-
-    def get_services(self, environment):
-        return self.call('get_services', {
-            'environment': environment})
-
-    def get_environments(self):
-        return self.call('get_environments')
-
-    def get_all_endpoints(self, environment=None):
-        return self.call('get_all_endpoints', {
-            'environment': environment})
 
     def _get_current_environment(self):
         # first, try to get environment from request_meta,
